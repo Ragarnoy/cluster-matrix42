@@ -10,13 +10,11 @@ use embedded_graphics_core::{
 use embedded_hal::{
     delay::DelayNs,
 };
-use core::marker::PhantomData;
 use embedded_hal::digital::OutputPin;
 
 /// Constants for the display dimensions
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 64;
-// const ROWS_PER_PANEL: usize = 32; // Physical rows per panel (64x64 is dual 32-row scanning)
 const ACTIVE_ROWS: usize = DISPLAY_HEIGHT / 2; // Number of rows to address
 
 /// Buffer format for dual scanning 64x64 matrix
@@ -263,17 +261,15 @@ where
 }
 
 /// Main Hub75 driver structure
-pub struct Hub75<PINS, DELAY> {
+pub struct Hub75<PINS> {
     pins: PINS,
     pub config: Hub75Config,
     framebuffer: FrameBuffer,
-    phantom: PhantomData<DELAY>,
 }
 
-impl<PINS, DELAY> Hub75<PINS, DELAY>
+impl<PINS> Hub75<PINS>
 where
     PINS: Hub75Pins,
-    DELAY: DelayNs,
 {
     /// Create a new Hub75 driver with default configuration
     pub fn new(pins: PINS) -> Self {
@@ -288,7 +284,6 @@ where
             pins,
             config,
             framebuffer,
-            phantom: PhantomData,
         }
     }
 
@@ -298,7 +293,7 @@ where
     }
 
     /// Update the display with the current framebuffer contents
-    pub fn update<D: DelayNs>(&mut self, delay: &mut D) -> Result<(), PINS::Error> where <PINS as Hub75Pins>::Error: embedded_hal::digital::Error {
+    pub fn update(&mut self, delay: &mut impl DelayNs) -> Result<(), PINS::Error> where <PINS as Hub75Pins>::Error: embedded_hal::digital::Error {
         // Only update if the framebuffer has changed
         if !self.framebuffer.is_modified() {
             return Ok(());
@@ -472,16 +467,15 @@ where
 }
 
 // Implement embedded-graphics interfaces
-impl<PINS, DELAY> OriginDimensions for Hub75<PINS, DELAY> {
+impl<PINS> OriginDimensions for Hub75<PINS> {
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }
 }
 
-impl<PINS, DELAY> DrawTarget for Hub75<PINS, DELAY>
+impl<PINS> DrawTarget for Hub75<PINS>
 where
     PINS: Hub75Pins,
-    DELAY: DelayNs,
 {
     type Color = Rgb565;
     type Error = Infallible;

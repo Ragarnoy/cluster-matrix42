@@ -22,8 +22,8 @@ use embassy_rp::usb::{Driver, InterruptHandler as UsbInterruptHandler};
 use embassy_time::{Delay, Duration, Timer};
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{PrimitiveStyle, PrimitiveStyleBuilder, Rectangle};
-use log::{debug, info, warn};
+use embedded_graphics::primitives::{PrimitiveStyleBuilder, Rectangle};
+use log::{debug, info};
 use smart_leds::RGB8;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
@@ -183,7 +183,7 @@ async fn matrix_task(pins: (
     };
 
     // Create the LED matrix driver
-    let mut display: Hub75<_, Delay> = Hub75::new_with_config(pins, config);
+    let mut display: Hub75<_> = Hub75::new_with_config(pins, config);
 
     // Define brightness levels to cycle through
     let brightness_levels = [32, 64, 128, 196]; // Very dim, dim, normal, bright (never maximum)
