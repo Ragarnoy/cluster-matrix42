@@ -1,0 +1,8 @@
+[package]
+name = "hub75-driver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embedded-graphics-core = { workspace = true}
+embedded-hal = { workspace = true }

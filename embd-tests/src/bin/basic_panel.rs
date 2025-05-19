@@ -29,7 +29,7 @@ use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
 // Import our Hub75 driver
-use hub_75_driver::{Hub75, Hub75Config, Hub75Pins};
+use hub75_driver::{Hub75, Hub75Config, Hub75Pins};
 
 // Number of WS2812 LEDs in the strip
 const NUM_LEDS: usize = 1;
