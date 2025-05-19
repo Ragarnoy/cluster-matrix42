@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 hub-75-driver = { path = "../hub-75-driver" }
 embedded-graphics = "0.8.0"
-embedded-hal = "1.0.0"
 
 # Logging dependencies
 #defmt = { version = "1.0.1" }
@@ -18,7 +17,6 @@ cortex-m = { version = "0.7.6", features = ["inline-asm"] }
 cortex-m-rt = { version = "0.7.0" }
 embassy-executor = { git = "https://github.com/embassy-rs/embassy", version = "0.7.0", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-rp = { version = "0.4.0", git = "https://github.com/embassy-rs/embassy", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa", "binary-info"] }
-embassy-sync = "0.6.2"
 embassy-time = { git = "https://github.com/embassy-rs/embassy", version = "0.4.0", features = ["defmt", "defmt-timestamp-uptime"] }
 embassy-usb-logger = { version = "0.4.0", git = "https://github.com/embassy-rs/embassy" }
 log = "0.4.27"
@@ -27,6 +25,7 @@ static_cell = "2.1"
 
 [lib]
 test = false
+bench = false
 
 [[bin]]
 name = "basic_panel"
@@ -34,7 +33,7 @@ test = false
 bench = false
 
 [profile.release]
-opt-level = "z"  # Optimize for size, not speed
+opt-level = 3  # Optimize for size, not speed
 lto = true        # Helps prevent timing optimizations
 codegen-units = 1 # Better for timing-sensitive code
 

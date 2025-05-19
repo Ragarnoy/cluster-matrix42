@@ -3,14 +3,14 @@
 use core::convert::Infallible;
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{OriginDimensions, Point, Size},
+    geometry::{OriginDimensions, Size},
     pixelcolor::{Rgb565, RgbColor},
     Pixel,
 };
 use embedded_hal::{
     delay::DelayNs,
+    digital::OutputPin,
 };
-use embedded_hal::digital::OutputPin;
 
 /// Constants for the display dimensions
 const DISPLAY_WIDTH: usize = 64;
@@ -138,93 +138,8 @@ static GAMMA8: [u8; 256] = [
     215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255,
 ];
 
-/// Defines the pins required for a Hub75 display
-///
-/// This trait is implemented for a collection of embedded-hal OutputPin types
-pub trait Hub75Pins {
-    type Error;
-
-    // R1, G1, B1 are RGB pins for the top half of the display
-    fn r1(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn g1(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn b1(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-
-    // R2, G2, B2 are RGB pins for the bottom half of the display
-    fn r2(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn g2(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn b2(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-
-    // A, B, C, D, E are the row address pins (5 pins needed for 64x64 matrix)
-    fn a(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn b(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn c(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn d(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn e(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-
-    // CLK, LAT, OE are the control pins
-    fn clk(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn lat(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-    fn oe(&mut self) -> &mut dyn OutputPin<Error = Self::Error>;
-
-    /// Set the row address pins based on the row number
-    fn set_row(&mut self, logical_row: usize) -> Result<(), Self::Error> where <Self as Hub75Pins>::Error: embedded_hal::digital::Error {
-        // For 64x64 dual-scan panels:
-        // - Physical rows 0-15: Upper half (bank 0)
-        // - Physical rows 16-31: Lower half (bank 1)
-        let physical_row = logical_row % 16;
-        let bank = (logical_row >= 16) as u8;  // 0 = top half, 1 = bottom half
-
-        self.a().set_state((physical_row & 0x01 != 0).into())?;
-        self.b().set_state((physical_row & 0x02 != 0).into())?;
-        self.c().set_state((physical_row & 0x04 != 0).into())?;
-        self.d().set_state((physical_row & 0x08 != 0).into())?;
-        self.e().set_state((bank != 0).into())?;  // Bank select
-
-        Ok(())
-    }
-
-    /// Set the color pins for both the top and bottom halves
-    fn set_color_pins(&mut self, pixel: &DualPixel, threshold: u8) -> Result<(), Self::Error> where <Self as Hub75Pins>::Error: embedded_hal::digital::Error {
-        // Set the RGB pins for both halves based on the comparison with the threshold
-        if pixel.r1 > threshold { self.r1().set_high()? } else { self.r1().set_low()? }
-        if pixel.g1 > threshold { self.g1().set_high()? } else { self.g1().set_low()? }
-        if pixel.b1 > threshold { self.b1().set_high()? } else { self.b1().set_low()? }
-
-        if pixel.r2 > threshold { self.r2().set_high()? } else { self.r2().set_low()? }
-        if pixel.g2 > threshold { self.g2().set_high()? } else { self.g2().set_low()? }
-        if pixel.b2 > threshold { self.b2().set_high()? } else { self.b2().set_low()? }
-
-        Ok(())
-    }
-
-    /// Generate a clock pulse
-    fn clock_pulse(&mut self) -> Result<(), Self::Error> where <Self as Hub75Pins>::Error: embedded_hal::digital::Error {
-        self.clk().set_high()?;
-        self.clk().set_low()?;
-        Ok(())
-    }
-
-    /// Latch the data into the display registers
-    fn latch(&mut self) -> Result<(), Self::Error> where <Self as Hub75Pins>::Error: embedded_hal::digital::Error {
-        self.lat().set_high()?;
-        self.lat().set_low()?;
-        Ok(())
-    }
-
-    /// Enable or disable display output
-    fn set_output_enabled(&mut self, enabled: bool) -> Result<(), Self::Error> where <Self as Hub75Pins>::Error: embedded_hal::digital::Error {
-        if enabled {
-            self.oe().set_low()? // Active low
-        } else {
-            self.oe().set_high()?
-        }
-        Ok(())
-    }
-}
-
-/// Implement Hub75Pins for a tuple of pins
-impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE> Hub75Pins
-for (R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE)
+/// Generic Hub75 pins structure using static dispatch with shared error type
+pub struct Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
 where
     E: core::fmt::Debug,
     R1: OutputPin<Error = E>,
@@ -242,42 +157,171 @@ where
     LAT: OutputPin<Error = E>,
     OE: OutputPin<Error = E>,
 {
-    type Error = E;
+    // RGB pins for the top half
+    r1: R1,
+    g1: G1,
+    b1: B1,
 
-    fn r1(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.0 }
-    fn g1(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.1 }
-    fn b1(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.2 }
-    fn r2(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.3 }
-    fn g2(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.4 }
-    fn b2(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.5 }
-    fn a(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.6 }
-    fn b(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.7 }
-    fn c(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.8 }
-    fn d(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.9 }
-    fn e(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.10 }
-    fn clk(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.11 }
-    fn lat(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.12 }
-    fn oe(&mut self) -> &mut dyn OutputPin<Error = Self::Error> { &mut self.13 }
+    // RGB pins for the bottom half
+    r2: R2,
+    g2: G2,
+    b2: B2,
+
+    // Row address pins
+    a: A,
+    b: B,
+    c: C,
+    d: D,
+    e: E0,
+
+    // Control pins
+    clk: CLK,
+    lat: LAT,
+    oe: OE,
 }
 
-/// Main Hub75 driver structure
-pub struct Hub75<PINS> {
-    pins: PINS,
+impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+where
+    E: core::fmt::Debug,
+    R1: OutputPin<Error = E>,
+    G1: OutputPin<Error = E>,
+    B1: OutputPin<Error = E>,
+    R2: OutputPin<Error = E>,
+    G2: OutputPin<Error = E>,
+    B2: OutputPin<Error = E>,
+    A: OutputPin<Error = E>,
+    B: OutputPin<Error = E>,
+    C: OutputPin<Error = E>,
+    D: OutputPin<Error = E>,
+    E0: OutputPin<Error = E>,
+    CLK: OutputPin<Error = E>,
+    LAT: OutputPin<Error = E>,
+    OE: OutputPin<Error = E>,
+{
+    /// Create new pins structure
+    pub fn new(
+        r1: R1, g1: G1, b1: B1,
+        r2: R2, g2: G2, b2: B2,
+        a: A, b: B, c: C, d: D, e: E0,
+        clk: CLK, lat: LAT, oe: OE,
+    ) -> Self {
+        Self {
+            r1, g1, b1, r2, g2, b2,
+            a, b, c, d, e,
+            clk, lat, oe,
+        }
+    }
+
+    /// Set the row address pins based on the row number
+    pub fn set_row(&mut self, logical_row: usize) -> Result<(), E> {
+        // For 64x64 dual-scan panels:
+        // - Physical rows 0-15: Upper half (bank 0)
+        // - Physical rows 16-31: Lower half (bank 1)
+        let physical_row = logical_row % 16;
+        let bank = (logical_row >= 16) as u8;  // 0 = top half, 1 = bottom half
+
+        if physical_row & 0x01 != 0 { self.a.set_high()? } else { self.a.set_low()? }
+        if physical_row & 0x02 != 0 { self.b.set_high()? } else { self.b.set_low()? }
+        if physical_row & 0x04 != 0 { self.c.set_high()? } else { self.c.set_low()? }
+        if physical_row & 0x08 != 0 { self.d.set_high()? } else { self.d.set_low()? }
+        if bank != 0 { self.e.set_high()? } else { self.e.set_low()? }
+
+        Ok(())
+    }
+
+    /// Set the color pins for both the top and bottom halves
+    pub fn set_color_pins(&mut self, pixel: &DualPixel, threshold: u8) -> Result<(), E> {
+        // Set the RGB pins for both halves based on the comparison with the threshold
+        if pixel.r1 > threshold { self.r1.set_high()? } else { self.r1.set_low()? }
+        if pixel.g1 > threshold { self.g1.set_high()? } else { self.g1.set_low()? }
+        if pixel.b1 > threshold { self.b1.set_high()? } else { self.b1.set_low()? }
+
+        if pixel.r2 > threshold { self.r2.set_high()? } else { self.r2.set_low()? }
+        if pixel.g2 > threshold { self.g2.set_high()? } else { self.g2.set_low()? }
+        if pixel.b2 > threshold { self.b2.set_high()? } else { self.b2.set_low()? }
+
+        Ok(())
+    }
+
+    /// Generate a clock pulse
+    pub fn clock_pulse(&mut self) -> Result<(), E> {
+        self.clk.set_high()?;
+        self.clk.set_low()?;
+        Ok(())
+    }
+
+    /// Latch the data into the display registers
+    pub fn latch(&mut self) -> Result<(), E> {
+        self.lat.set_high()?;
+        self.lat.set_low()?;
+        Ok(())
+    }
+
+    /// Enable or disable display output
+    pub fn set_output_enabled(&mut self, enabled: bool) -> Result<(), E> {
+        if enabled {
+            self.oe.set_low()? // Active low
+        } else {
+            self.oe.set_high()?
+        }
+        Ok(())
+    }
+}
+
+/// Main Hub75 driver structure with static dispatch
+pub struct Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+where
+    E: core::fmt::Debug,
+    R1: OutputPin<Error = E>,
+    G1: OutputPin<Error = E>,
+    B1: OutputPin<Error = E>,
+    R2: OutputPin<Error = E>,
+    G2: OutputPin<Error = E>,
+    B2: OutputPin<Error = E>,
+    A: OutputPin<Error = E>,
+    B: OutputPin<Error = E>,
+    C: OutputPin<Error = E>,
+    D: OutputPin<Error = E>,
+    E0: OutputPin<Error = E>,
+    CLK: OutputPin<Error = E>,
+    LAT: OutputPin<Error = E>,
+    OE: OutputPin<Error = E>,
+{
+    pins: Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>,
     pub config: Hub75Config,
     framebuffer: FrameBuffer,
 }
 
-impl<PINS> Hub75<PINS>
+impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
 where
-    PINS: Hub75Pins,
+    E: core::fmt::Debug,
+    R1: OutputPin<Error = E>,
+    G1: OutputPin<Error = E>,
+    B1: OutputPin<Error = E>,
+    R2: OutputPin<Error = E>,
+    G2: OutputPin<Error = E>,
+    B2: OutputPin<Error = E>,
+    A: OutputPin<Error = E>,
+    B: OutputPin<Error = E>,
+    C: OutputPin<Error = E>,
+    D: OutputPin<Error = E>,
+    E0: OutputPin<Error = E>,
+    CLK: OutputPin<Error = E>,
+    LAT: OutputPin<Error = E>,
+    OE: OutputPin<Error = E>,
 {
     /// Create a new Hub75 driver with default configuration
-    pub fn new(pins: PINS) -> Self {
+    pub fn new(pins: Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>) -> Self {
         Self::new_with_config(pins, Hub75Config::default())
     }
 
     /// Create a new Hub75 driver with custom configuration
-    pub fn new_with_config(pins: PINS, config: Hub75Config) -> Self {
+    pub fn new_with_config(
+        pins: Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>,
+        config: Hub75Config
+    ) -> Self {
         let framebuffer = FrameBuffer::new();
 
         Self {
@@ -293,7 +337,7 @@ where
     }
 
     /// Update the display with the current framebuffer contents
-    pub fn update(&mut self, delay: &mut impl DelayNs) -> Result<(), PINS::Error> where <PINS as Hub75Pins>::Error: embedded_hal::digital::Error {
+    pub fn update(&mut self, delay: &mut impl DelayNs) -> Result<(), E> {
         // Only update if the framebuffer has changed
         if !self.framebuffer.is_modified() {
             return Ok(());
@@ -345,13 +389,9 @@ where
                     let mask = 1 << (7 - bit_plane);  // MSB first
                     let threshold = mask - 1;
 
-                    self.pins.r1().set_state((r1 > threshold).into())?;
-                    self.pins.g1().set_state((g1 > threshold).into())?;
-                    self.pins.b1().set_state((b1 > threshold).into())?;
-                    self.pins.r2().set_state((r2 > threshold).into())?;
-                    self.pins.g2().set_state((g2 > threshold).into())?;
-                    self.pins.b2().set_state((b2 > threshold).into())?;
-
+                    // Set the color pins
+                    let dual_pixel = DualPixel { r1, g1, b1, r2, g2, b2 };
+                    self.pins.set_color_pins(&dual_pixel, threshold)?;
                     self.pins.clock_pulse()?;
                 }
 
@@ -381,20 +421,6 @@ where
         self.framebuffer.reset_modified();
 
         Ok(())
-    }
-
-    pub fn draw_pixel_p3_mapped(&mut self, x: i32, y: i32, color: Rgb565) {
-        // P3 64x64 specific mapping
-        let panel_half_height = 32;
-        let panel_quarter_height = 16;
-
-        let is_top_stripe = (y % panel_half_height) < panel_quarter_height;
-        let mapped_x = (x*2) + (if is_top_stripe { 1 } else { 0 });
-        let mapped_y = (y / panel_half_height) * panel_quarter_height
-            + y % panel_quarter_height;
-
-        // Call the original set_pixel with mapped coordinates
-        self.set_pixel(mapped_x, mapped_y, color);
     }
 
     /// Set a pixel in the framebuffer
@@ -467,15 +493,48 @@ where
 }
 
 // Implement embedded-graphics interfaces
-impl<PINS> OriginDimensions for Hub75<PINS> {
+impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE> OriginDimensions
+for Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+where
+    E: core::fmt::Debug,
+    R1: OutputPin<Error = E>,
+    G1: OutputPin<Error = E>,
+    B1: OutputPin<Error = E>,
+    R2: OutputPin<Error = E>,
+    G2: OutputPin<Error = E>,
+    B2: OutputPin<Error = E>,
+    A: OutputPin<Error = E>,
+    B: OutputPin<Error = E>,
+    C: OutputPin<Error = E>,
+    D: OutputPin<Error = E>,
+    E0: OutputPin<Error = E>,
+    CLK: OutputPin<Error = E>,
+    LAT: OutputPin<Error = E>,
+    OE: OutputPin<Error = E>,
+{
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }
 }
 
-impl<PINS> DrawTarget for Hub75<PINS>
+impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE> DrawTarget
+for Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
 where
-    PINS: Hub75Pins,
+    E: core::fmt::Debug,
+    R1: OutputPin<Error = E>,
+    G1: OutputPin<Error = E>,
+    B1: OutputPin<Error = E>,
+    R2: OutputPin<Error = E>,
+    G2: OutputPin<Error = E>,
+    B2: OutputPin<Error = E>,
+    A: OutputPin<Error = E>,
+    B: OutputPin<Error = E>,
+    C: OutputPin<Error = E>,
+    D: OutputPin<Error = E>,
+    E0: OutputPin<Error = E>,
+    CLK: OutputPin<Error = E>,
+    LAT: OutputPin<Error = E>,
+    OE: OutputPin<Error = E>,
 {
     type Color = Rgb565;
     type Error = Infallible;
@@ -486,69 +545,6 @@ where
     {
         for Pixel(point, color) in pixels {
             self.set_pixel(point.x, point.y, color);
-        }
-
-        Ok(())
-    }
-}
-
-/// Helper functions for testing and diagnosis
-pub struct Hub75Test;
-
-impl Hub75Test {
-    /// Draw a gradient test pattern
-    pub fn draw_gradient<D>(display: &mut D) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = Rgb565>,
-    {
-        for y in 0..DISPLAY_HEIGHT as i32 {
-            // Create gradient colors
-            let blue = (y * 4) as u8;
-            let color = Rgb565::new(0, 0, blue);
-
-            // Draw horizontal line
-            for x in 0..DISPLAY_WIDTH as i32 {
-                display.draw_iter([Pixel(Point::new(x, y), color)])?;
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Draw a pattern that highlights dual scan row mapping issues
-    pub fn draw_dual_scan_test<D>(display: &mut D) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = Rgb565>,
-    {
-        // Clear display
-        display.draw_iter([Pixel(Point::new(0, 0), Rgb565::BLACK)])?;
-
-        // Draw top half red (rows 0-31)
-        for y in 0..32 {
-            for x in 0..DISPLAY_WIDTH as i32 {
-                display.draw_iter([Pixel(Point::new(x, y), Rgb565::RED)])?;
-            }
-        }
-
-        // Draw bottom half blue (rows 32-63)
-        for y in 32..64 {
-            for x in 0..DISPLAY_WIDTH as i32 {
-                display.draw_iter([Pixel(Point::new(x, y), Rgb565::BLUE)])?;
-            }
-        }
-
-        // Draw horizontal white lines every 8 pixels
-        for y in (0..64).step_by(8) {
-            for x in 0..DISPLAY_WIDTH as i32 {
-                display.draw_iter([Pixel(Point::new(x, y), Rgb565::WHITE)])?;
-            }
-        }
-
-        // Draw vertical white lines every 8 pixels
-        for x in (0..64).step_by(8) {
-            for y in 0..DISPLAY_HEIGHT as i32 {
-                display.draw_iter([Pixel(Point::new(x, y), Rgb565::WHITE)])?;
-            }
         }
 
         Ok(())

@@ -29,7 +29,7 @@ use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
 // Import our Hub75 driver
-use hub_75_driver::{Hub75, Hub75Config};
+use hub_75_driver::{Hub75, Hub75Config, Hub75Pins};
 
 // Number of WS2812 LEDs in the strip
 const NUM_LEDS: usize = 1;
@@ -171,23 +171,22 @@ async fn matrix_task(pins: (
     let mut delay = Delay;
 
     info!("Starting Hub75 LED matrix control");
+    
+    let (r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe) = pins;
 
-    // Configure the Hub75 driver with reduced PWM bits for testing
-    // Start with fewer PWM bits to ensure stability
-    let config = Hub75Config {
-        pwm_bits: 6,                // Start with 3-bit PWM (8 brightness levels) for testing
-        brightness: 200,            // Use a higher brightness for better visibility during testing
-        use_gamma_correction: false,
-        chain_length: 1,
-        row_step_time_us: 1,        // Increase row step time for more stable display
-    };
+    // Create pins struct with static dispatch
+    let pins = Hub75Pins::new(r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe);
 
     // Create the LED matrix driver
-    let mut display: Hub75<_> = Hub75::new_with_config(pins, config);
+    let config = Hub75Config {
+        pwm_bits: 4,
+        brightness: 100,
+        use_gamma_correction: false,
+        chain_length: 1,
+        row_step_time_us: 1,
+    };
 
-    // Define brightness levels to cycle through
-    let brightness_levels = [32, 64, 128, 196]; // Very dim, dim, normal, bright (never maximum)
-    let mut brightness_index = 0;
+    let mut display = Hub75::new_with_config(pins, config);
 
     // Define colors to alternate for the background
     let colors = [
@@ -202,19 +201,13 @@ async fn matrix_task(pins: (
     let mut frame_counter = 0;
 
     // The central grey square
-    let grey = Rgb565::new(128, 128, 128); // Medium grey
-
+    let grey = Rgb565::new(150, 150, 150); // Medium grey
+    
     // Main animation loop
     loop {
         let start_time = embassy_time::Instant::now();
 
         while (embassy_time::Instant::now() - start_time) < Duration::from_secs(2) {
-            // Set current brightness level
-            let brightness = brightness_levels[brightness_index];
-            let mut new_config = display.config;
-            new_config.brightness = brightness;
-            display.set_config(new_config);
-
             // Clear the display
             display.clear();
 
@@ -244,8 +237,8 @@ async fn matrix_task(pins: (
                 .unwrap();
 
             // Log status before update
-            info!("Matrix rendering - Frame: {}, Color: {}, Brightness: {}",
-                  frame_counter, color_index, brightness);
+            info!("Matrix rendering - Frame: {}, Color: {}",
+                  frame_counter, color_index);
 
             // Try-catch the update to prevent crashing if there's an issue
             display.update(&mut delay).unwrap();
@@ -256,11 +249,6 @@ async fn matrix_task(pins: (
 
         // Cycle to next color
         color_index = (color_index + 1) % colors.len();
-
-        // Change brightness level every two color changes
-        if color_index % 2 == 0 {
-            brightness_index = (brightness_index + 1) % brightness_levels.len();
-        }
 
         // Wait 500ms before starting next cycle
         Timer::after(Duration::from_millis(500)).await;
@@ -274,6 +262,4 @@ async fn core1_task(driver: Driver<'static, USB>) {
 
     // Start the USB logger - this function doesn't return
     embassy_usb_logger::run!(1024, log::LevelFilter::Info, driver);
-
-    // No code after run! will be executed
 }
