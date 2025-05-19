@@ -14,7 +14,7 @@ lto = true
 # Local dependencies
 hub75-driver = { path = "hub75-driver" }
 
-# Embeeded dependencies
+# Embedded dependencies
 embedded-hal = { version = "1.0" }
 embedded-graphics-core = "0.4"
 embedded-graphics = "0.8.0"
