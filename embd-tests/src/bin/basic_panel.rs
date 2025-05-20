@@ -196,13 +196,14 @@ async fn matrix_task(
     // Animation frame counter and time tracking
     let mut frame_counter: u32 = 0;
     let mut last_time = embassy_time::Instant::now();
-    let mut fps: f32 = 0.0;
+    let mut fps: u64 = 0;
 
     // Main animation loop
     loop {
         let current_time = embassy_time::Instant::now();
         let elapsed = current_time.duration_since(last_time);
-        fps = 1.0 / (elapsed.as_micros() as f32 / 1_000_000.0);
+        let micros = elapsed.as_micros();
+        fps = if micros > 0 { 1_000_000 / micros } else { 0 };
         last_time = current_time;
 
         info!("Current FPS: {:.2}", fps);
