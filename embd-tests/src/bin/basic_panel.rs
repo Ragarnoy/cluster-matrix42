@@ -20,8 +20,6 @@ use embassy_rp::pio::{InterruptHandler as PioInterruptHandler, Pio};
 use embassy_rp::pio_programs::ws2812::{PioWs2812, PioWs2812Program};
 use embassy_rp::usb::{Driver, InterruptHandler as UsbInterruptHandler};
 use embassy_time::{Delay, Duration, Timer};
-use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{PrimitiveStyleBuilder, Rectangle};
 use hub75_driver::{Hub75, Hub75Config, Hub75Pins};
 use log::{debug, info};
 use smart_leds::RGB8;
@@ -195,7 +193,7 @@ async fn matrix_task(
     // Animation frame counter and time tracking
     let mut frame_counter: u32 = 0;
     let mut last_time = embassy_time::Instant::now();
-    let mut fps: u64 = 0;
+    let mut fps: u64;
 
     // Main animation loop
     loop {

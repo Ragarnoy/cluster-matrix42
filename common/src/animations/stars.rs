@@ -4,6 +4,10 @@
 //! that can be used in both simulator and hardware environments.
 
 use core::fmt::Write;
+use core::format_args;
+use core::iter::Iterator;
+use core::result::Result;
+use core::result::Result::Ok;
 use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::Rgb565,
