@@ -1,6 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["embd-tests", "hub75-driver"]
+members = [ "common",
+    "embd-tests",
+    "hub75-driver",
+    "simulator"
+]
 
 [profile.release]
 opt-level = 3
@@ -36,3 +40,5 @@ embassy-usb-logger = { version = "0.4", git = "https://github.com/embassy-rs/emb
 log = "0.4"
 smart-leds = "0.4"
 static_cell = "2.1"
+heapless = "0.8.0"
+libm = "0.2.15"

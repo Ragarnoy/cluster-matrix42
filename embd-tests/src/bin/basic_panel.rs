@@ -3,7 +3,6 @@
 //! Core 1: Handles USB logging
 //!
 //! Features:
-//! - 64x64 LED matrix showing alternating background colors with a grey square
 //! - Brightness cycling between very dim, dim, normal, and bright
 //! - WS2812 LED blinking with rainbow colors
 //! - USB logging from Core 1
@@ -11,25 +10,23 @@
 #![no_std]
 #![no_main]
 
+use common::animations::stars;
 use embassy_executor::Executor;
 use embassy_rp::bind_interrupts;
 use embassy_rp::gpio;
-use embassy_rp::multicore::{spawn_core1, Stack};
+use embassy_rp::multicore::{Stack, spawn_core1};
 use embassy_rp::peripherals::{PIO0, USB};
 use embassy_rp::pio::{InterruptHandler as PioInterruptHandler, Pio};
 use embassy_rp::pio_programs::ws2812::{PioWs2812, PioWs2812Program};
 use embassy_rp::usb::{Driver, InterruptHandler as UsbInterruptHandler};
 use embassy_time::{Delay, Duration, Timer};
-use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyleBuilder, Rectangle};
+use hub75_driver::{Hub75, Hub75Config, Hub75Pins};
 use log::{debug, info};
 use smart_leds::RGB8;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
-
-// Import our Hub75 driver
-use hub75_driver::{Hub75, Hub75Config, Hub75Pins};
 
 // Number of WS2812 LEDs in the strip
 const NUM_LEDS: usize = 1;
@@ -71,7 +68,9 @@ fn main() -> ! {
     let usb_driver = Driver::new(p.USB, UsbIrqs);
 
     // Setup WS2812 for Core 0 - using PIN_25 for WS2812
-    let Pio { mut common, sm0, .. } = Pio::new(p.PIO0, PioIrqs);
+    let Pio {
+        mut common, sm0, ..
+    } = Pio::new(p.PIO0, PioIrqs);
     let program = PioWs2812Program::new(&mut common);
     let ws2812 = PioWs2812::new(&mut common, sm0, p.DMA_CH0, p.PIN_25, &program);
 
@@ -133,7 +132,10 @@ async fn ws2812_task(mut ws2812: WS2812Type) {
         for i in 0..NUM_LEDS {
             let wheel_pos = (((i * 256) as u16 / NUM_LEDS as u16 + color_wheel_pos) & 255) as u8;
             data[i] = wheel(wheel_pos);
-            debug!("LED {}: R: {} G: {} B: {}", i, data[i].r, data[i].g, data[i].b);
+            debug!(
+                "LED {}: R: {} G: {} B: {}",
+                i, data[i].r, data[i].g, data[i].b
+            );
         }
 
         // Write the colors to the WS2812 LEDs
@@ -151,27 +153,29 @@ async fn ws2812_task(mut ws2812: WS2812Type) {
 }
 
 #[embassy_executor::task]
-async fn matrix_task(pins: (
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-    gpio::Output<'static>,
-)) {
+async fn matrix_task(
+    pins: (
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+        gpio::Output<'static>,
+    ),
+) {
     // Use Embassy's built-in Delay implementation
     let mut delay = Delay;
 
     info!("Starting Hub75 LED matrix control");
-    
+
     let (r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe) = pins;
 
     // Create pins struct with static dispatch
@@ -179,82 +183,40 @@ async fn matrix_task(pins: (
 
     // Create the LED matrix driver
     let config = Hub75Config {
-        pwm_bits: 4,
-        brightness: 100,
-        use_gamma_correction: false,
+        pwm_bits: 8,
+        brightness: 200,
+        use_gamma_correction: true, // Enable gamma correction for better animations
         chain_length: 1,
         row_step_time_us: 1,
     };
 
     let mut display = Hub75::new_with_config(pins, config);
 
-    // Define colors to alternate for the background
-    let colors = [
-        Rgb565::RED,
-        Rgb565::GREEN,
-        Rgb565::BLUE,
-        Rgb565::YELLOW,
-        Rgb565::CYAN,
-        Rgb565::MAGENTA,
-    ];
-    let mut color_index = 0;
-    let mut frame_counter = 0;
+    // Animation frame counter and time tracking
+    let mut frame_counter: u32 = 0;
+    let mut last_time = embassy_time::Instant::now();
+    let mut fps: u64 = 0;
 
-    // The central grey square
-    let grey = Rgb565::new(150, 150, 150); // Medium grey
-    
     // Main animation loop
     loop {
-        let start_time = embassy_time::Instant::now();
+        let current_time = embassy_time::Instant::now();
+        let elapsed = current_time.duration_since(last_time);
+        let micros = elapsed.as_micros();
+        fps = if micros > 0 { 1_000_000 / micros } else { 0 };
+        last_time = current_time;
 
-        while (embassy_time::Instant::now() - start_time) < Duration::from_secs(2) {
-            // Clear the display
-            display.clear();
+        info!("Current FPS: {}", fps);
 
-            // Get current background color
-            let bg_color = colors[color_index];
+        // Draw the current animation frame
+        stars::draw_animation_frame(&mut display, frame_counter).unwrap();
 
-            // Fill screen with background color
-            // (except where the grey square will be)
-            for y in 0..64 {
-                for x in 0..64 {
-                    // Skip pixels that will be part of the grey square
-                    if (20..44).contains(&x) && (20..44).contains(&y) {
-                        continue;
-                    }
-                    display.draw_iter([Pixel(Point::new(x, y), bg_color)]).unwrap();
-                }
-            }
+        // Update the display
+        display.update(&mut delay).unwrap();
 
-            // Draw the grey square in the middle (24x24 pixels)
-            let square_style = PrimitiveStyleBuilder::new()
-                .fill_color(grey)
-                .build();
-
-            Rectangle::new(Point::new(20, 20), Size::new(24, 24))
-                .into_styled(square_style)
-                .draw(&mut display)
-                .unwrap();
-
-            // Log status before update
-            info!("Matrix rendering - Frame: {}, Color: {}",
-                  frame_counter, color_index);
-
-            // Try-catch the update to prevent crashing if there's an issue
-            display.update(&mut delay).unwrap();
-
-            // Increment frame counter
-            frame_counter += 1;
-        }
-
-        // Cycle to next color
-        color_index = (color_index + 1) % colors.len();
-
-        // Wait 500ms before starting next cycle
-        Timer::after(Duration::from_millis(500)).await;
+        // Increment frame counter
+        frame_counter = frame_counter.wrapping_add(1);
     }
 }
-
 
 #[embassy_executor::task]
 async fn core1_task(driver: Driver<'static, USB>) {
