@@ -3,7 +3,6 @@
 //! Core 1: Handles USB logging
 //!
 //! Features:
-//! - 64x64 LED matrix showing alternating background colors with a grey square
 //! - Brightness cycling between very dim, dim, normal, and bright
 //! - WS2812 LED blinking with rainbow colors
 //! - USB logging from Core 1
@@ -206,7 +205,7 @@ async fn matrix_task(
         fps = if micros > 0 { 1_000_000 / micros } else { 0 };
         last_time = current_time;
 
-        info!("Current FPS: {:.2}", fps);
+        info!("Current FPS: {}", fps);
 
         // Draw the current animation frame
         stars::draw_animation_frame(&mut display, frame_counter).unwrap();
