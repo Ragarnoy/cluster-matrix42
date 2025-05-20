@@ -2,15 +2,12 @@
 
 use core::convert::Infallible;
 use embedded_graphics_core::{
+    Pixel,
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Size},
     pixelcolor::{Rgb565, RgbColor},
-    Pixel,
 };
-use embedded_hal::{
-    delay::DelayNs,
-    digital::OutputPin,
-};
+use embedded_hal::{delay::DelayNs, digital::OutputPin};
 
 /// Constants for the display dimensions
 const DISPLAY_WIDTH: usize = 64;
@@ -21,12 +18,12 @@ const ACTIVE_ROWS: usize = DISPLAY_HEIGHT / 2; // Number of rows to address
 /// Each entry represents the color values for both top and bottom pixels
 #[derive(Clone, Copy, Default)]
 pub struct DualPixel {
-    pub r1: u8,  // Red for top half
-    pub g1: u8,  // Green for top half
-    pub b1: u8,  // Blue for top half
-    pub r2: u8,  // Red for bottom half
-    pub g2: u8,  // Green for bottom half
-    pub b2: u8,  // Blue for bottom half
+    pub r1: u8, // Red for top half
+    pub g1: u8, // Green for top half
+    pub b1: u8, // Blue for top half
+    pub r2: u8, // Red for bottom half
+    pub g2: u8, // Green for bottom half
+    pub b2: u8, // Blue for bottom half
 }
 
 /// Complete framebuffer for a 64x64 display
@@ -109,33 +106,28 @@ pub struct Hub75Config {
 impl Default for Hub75Config {
     fn default() -> Self {
         Self {
-            pwm_bits: 4,               // 4-bit PWM (16 brightness levels)
-            brightness: 255,           // Full brightness
+            pwm_bits: 4,                // 4-bit PWM (16 brightness levels)
+            brightness: 255,            // Full brightness
             use_gamma_correction: true, // Enable gamma correction for better visuals
-            chain_length: 1,           // Single 64x64 panel
-            row_step_time_us: 1,       // 1µs delay between row transitions
+            chain_length: 1,            // Single 64x64 panel
+            row_step_time_us: 1,        // 1µs delay between row transitions
         }
     }
 }
 
 /// Gamma correction lookup table for better color representation
 static GAMMA8: [u8; 256] = [
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
-    2,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  5,  5,  5,
-    5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  9,  9,  9,  10,
-    10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
-    17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
-    25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
-    37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
-    51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
-    69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
-    90, 92, 93, 95, 96, 98, 99, 101,102,104,105,107,109,110,112,114,
-    115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,
-    144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
-    177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
-    215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
+    5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14,
+    14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27,
+    27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36, 37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46,
+    47, 48, 49, 50, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68, 69, 70, 72,
+    73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89, 90, 92, 93, 95, 96, 98, 99, 101, 102, 104,
+    105, 107, 109, 110, 112, 114, 115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137,
+    138, 140, 142, 144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
+    177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213, 215, 218, 220,
+    223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255,
 ];
 
 /// Generic Hub75 pins structure using static dispatch with shared error type
@@ -181,7 +173,7 @@ where
 }
 
 impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
-Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+    Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
 where
     E: core::fmt::Debug,
     R1: OutputPin<Error = E>,
@@ -201,15 +193,36 @@ where
 {
     /// Create new pins structure
     pub fn new(
-        r1: R1, g1: G1, b1: B1,
-        r2: R2, g2: G2, b2: B2,
-        a: A, b: B, c: C, d: D, e: E0,
-        clk: CLK, lat: LAT, oe: OE,
+        r1: R1,
+        g1: G1,
+        b1: B1,
+        r2: R2,
+        g2: G2,
+        b2: B2,
+        a: A,
+        b: B,
+        c: C,
+        d: D,
+        e: E0,
+        clk: CLK,
+        lat: LAT,
+        oe: OE,
     ) -> Self {
         Self {
-            r1, g1, b1, r2, g2, b2,
-            a, b, c, d, e,
-            clk, lat, oe,
+            r1,
+            g1,
+            b1,
+            r2,
+            g2,
+            b2,
+            a,
+            b,
+            c,
+            d,
+            e,
+            clk,
+            lat,
+            oe,
         }
     }
 
@@ -219,13 +232,33 @@ where
         // - Physical rows 0-15: Upper half (bank 0)
         // - Physical rows 16-31: Lower half (bank 1)
         let physical_row = logical_row % 16;
-        let bank = (logical_row >= 16) as u8;  // 0 = top half, 1 = bottom half
+        let bank = (logical_row >= 16) as u8; // 0 = top half, 1 = bottom half
 
-        if physical_row & 0x01 != 0 { self.a.set_high()? } else { self.a.set_low()? }
-        if physical_row & 0x02 != 0 { self.b.set_high()? } else { self.b.set_low()? }
-        if physical_row & 0x04 != 0 { self.c.set_high()? } else { self.c.set_low()? }
-        if physical_row & 0x08 != 0 { self.d.set_high()? } else { self.d.set_low()? }
-        if bank != 0 { self.e.set_high()? } else { self.e.set_low()? }
+        if physical_row & 0x01 != 0 {
+            self.a.set_high()?
+        } else {
+            self.a.set_low()?
+        }
+        if physical_row & 0x02 != 0 {
+            self.b.set_high()?
+        } else {
+            self.b.set_low()?
+        }
+        if physical_row & 0x04 != 0 {
+            self.c.set_high()?
+        } else {
+            self.c.set_low()?
+        }
+        if physical_row & 0x08 != 0 {
+            self.d.set_high()?
+        } else {
+            self.d.set_low()?
+        }
+        if bank != 0 {
+            self.e.set_high()?
+        } else {
+            self.e.set_low()?
+        }
 
         Ok(())
     }
@@ -233,13 +266,37 @@ where
     /// Set the color pins for both the top and bottom halves
     pub fn set_color_pins(&mut self, pixel: &DualPixel, threshold: u8) -> Result<(), E> {
         // Set the RGB pins for both halves based on the comparison with the threshold
-        if pixel.r1 > threshold { self.r1.set_high()? } else { self.r1.set_low()? }
-        if pixel.g1 > threshold { self.g1.set_high()? } else { self.g1.set_low()? }
-        if pixel.b1 > threshold { self.b1.set_high()? } else { self.b1.set_low()? }
+        if pixel.r1 > threshold {
+            self.r1.set_high()?
+        } else {
+            self.r1.set_low()?
+        }
+        if pixel.g1 > threshold {
+            self.g1.set_high()?
+        } else {
+            self.g1.set_low()?
+        }
+        if pixel.b1 > threshold {
+            self.b1.set_high()?
+        } else {
+            self.b1.set_low()?
+        }
 
-        if pixel.r2 > threshold { self.r2.set_high()? } else { self.r2.set_low()? }
-        if pixel.g2 > threshold { self.g2.set_high()? } else { self.g2.set_low()? }
-        if pixel.b2 > threshold { self.b2.set_high()? } else { self.b2.set_low()? }
+        if pixel.r2 > threshold {
+            self.r2.set_high()?
+        } else {
+            self.r2.set_low()?
+        }
+        if pixel.g2 > threshold {
+            self.g2.set_high()?
+        } else {
+            self.g2.set_low()?
+        }
+        if pixel.b2 > threshold {
+            self.b2.set_high()?
+        } else {
+            self.b2.set_low()?
+        }
 
         Ok(())
     }
@@ -294,7 +351,7 @@ where
 }
 
 impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
-Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+    Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
 where
     E: core::fmt::Debug,
     R1: OutputPin<Error = E>,
@@ -320,7 +377,7 @@ where
     /// Create a new Hub75 driver with custom configuration
     pub fn new_with_config(
         pins: Hub75Pins<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>,
-        config: Hub75Config
+        config: Hub75Config,
     ) -> Self {
         let framebuffer = FrameBuffer::new();
 
@@ -362,10 +419,8 @@ where
                     let pixel = self.framebuffer.buffer[row][col];
 
                     // Apply gamma and brightness in-place
-                    let (mut r1, mut g1, mut b1, mut r2, mut g2, mut b2) = (
-                        pixel.r1, pixel.g1, pixel.b1,
-                        pixel.r2, pixel.g2, pixel.b2
-                    );
+                    let (mut r1, mut g1, mut b1, mut r2, mut g2, mut b2) =
+                        (pixel.r1, pixel.g1, pixel.b1, pixel.r2, pixel.g2, pixel.b2);
 
                     if self.config.use_gamma_correction {
                         r1 = GAMMA8[r1 as usize];
@@ -386,11 +441,18 @@ where
                     b2 = (b2 as u16 * brightness / 255) as u8;
 
                     // Bit plane comparison
-                    let mask = 1 << (7 - bit_plane);  // MSB first
+                    let mask = 1 << (7 - bit_plane); // MSB first
                     let threshold = mask - 1;
 
                     // Set the color pins
-                    let dual_pixel = DualPixel { r1, g1, b1, r2, g2, b2 };
+                    let dual_pixel = DualPixel {
+                        r1,
+                        g1,
+                        b1,
+                        r2,
+                        g2,
+                        b2,
+                    };
                     self.pins.set_color_pins(&dual_pixel, threshold)?;
                     self.pins.clock_pulse()?;
                 }
@@ -426,9 +488,15 @@ where
     /// Set a pixel in the framebuffer
     pub fn set_pixel(&mut self, x: i32, y: i32, color: Rgb565) {
         // Convert Rgb565 to 8-bit linear scale
-        let r = ((color.r() as u16 * 255) / 31) as u8;  // 5-bit -> 8-bit
-        let g = ((color.g() as u16 * 255) / 63) as u8;  // 6-bit -> 8-bit
-        let b = ((color.b() as u16 * 255) / 31) as u8;
+        let r_original = color.r() << 3; // 5-bit -> 8-bit
+        let g_original = color.g() << 2; // 6-bit -> 8-bit
+        let b_original = color.b() << 3;
+
+        // Swap the colors to match the hardware configuration
+        // Based on your description: blue→green, green→red, red→blue
+        let r = b_original; // Red pin receives what should be blue
+        let g = r_original; // Green pin receives what should be red
+        let b = g_original; // Blue pin receives what should be green
 
         self.framebuffer.set_pixel(x as usize, y as usize, r, g, b);
     }
@@ -494,7 +562,7 @@ where
 
 // Implement embedded-graphics interfaces
 impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE> OriginDimensions
-for Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+    for Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
 where
     E: core::fmt::Debug,
     R1: OutputPin<Error = E>,
@@ -518,7 +586,7 @@ where
 }
 
 impl<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE> DrawTarget
-for Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
+    for Hub75<E, R1, G1, B1, R2, G2, B2, A, B, C, D, E0, CLK, LAT, OE>
 where
     E: core::fmt::Debug,
     R1: OutputPin<Error = E>,
