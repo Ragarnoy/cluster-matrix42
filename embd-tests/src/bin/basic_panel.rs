@@ -180,13 +180,7 @@ async fn matrix_task(
     let pins = Hub75Pins::new(r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe);
 
     // Create the LED matrix driver
-    let config = Hub75Config {
-        pwm_bits: 8,
-        brightness: 200,
-        use_gamma_correction: true, // Enable gamma correction for better animations
-        chain_length: 1,
-        row_step_time_us: 1,
-    };
+    let config = Hub75Config::default();
 
     let mut display = Hub75::new_with_config(pins, config);
 

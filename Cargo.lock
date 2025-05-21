@@ -569,7 +569,6 @@ dependencies = [
  "embassy-rp",
  "embassy-time",
  "embassy-usb-logger",
- "embedded-graphics",
  "hub75-driver",
  "log",
  "panic-probe",

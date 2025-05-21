@@ -18,7 +18,7 @@ fn main() -> Result<(), std::convert::Infallible> {
         .build();
 
     // Create a new window with the output settings
-    let mut window = Window::new("Solar System Simulator", &output_settings);
+    let mut window = Window::new("Cluster Matrix Simulator", &output_settings);
 
     // Animation frame counter
     let mut frame: u32 = 0;

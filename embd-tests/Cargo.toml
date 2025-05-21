@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 hub75-driver = { workspace = true }
-embedded-graphics = { workspace = true }
 common = { path = "../common" }
 
 # Logging dependencies

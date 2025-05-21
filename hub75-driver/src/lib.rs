@@ -99,17 +99,15 @@ pub struct Hub75Config {
     pub pwm_bits: u8,               // Number of bits for PWM (1-8)
     pub brightness: u8,             // Overall brightness (0-255)
     pub use_gamma_correction: bool, // Apply gamma correction to colors
-    pub chain_length: usize,        // Number of panels in series (default 1)
     pub row_step_time_us: u32,      // Delay between row updates
 }
 
 impl Default for Hub75Config {
     fn default() -> Self {
         Self {
-            pwm_bits: 4,                // 4-bit PWM (16 brightness levels)
-            brightness: 255,            // Full brightness
+            pwm_bits: 6,                // 6-bit PWM
+            brightness: 220,            // High brightness
             use_gamma_correction: true, // Enable gamma correction for better visuals
-            chain_length: 1,            // Single 64x64 panel
             row_step_time_us: 1,        // 1µs delay between row transitions
         }
     }
