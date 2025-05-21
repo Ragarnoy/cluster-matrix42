@@ -33,7 +33,7 @@ where
 
     // Background gradient
     for y in 0..64 {
-        let gradient_color = Rgb565::new(0, 0, ((y as f32 / 64.0) * 31.0) as u8);
+        let gradient_color = Rgb565::new(0, 0, (y >> 1) as u8);
 
         Rectangle::new(Point::new(0, y), Size::new(64, 1))
             .into_styled(PrimitiveStyle::with_fill(gradient_color))
@@ -62,7 +62,7 @@ where
     for (i, (x, y)) in star_positions.iter().enumerate() {
         // Each star blinks at a different rate
         let star_time = t + (i as f32 * 0.5);
-        let brightness = ((libm::sin(star_time as f64) * 0.5 + 0.5) * 31.0) as u8;
+        let brightness = ((libm::sin(star_time as f64) * 0.5 + 0.5) * 32.0) as u8;
 
         if brightness > 5 {
             let star_color = Rgb565::new(brightness, brightness, brightness);
@@ -76,26 +76,20 @@ where
     let center = Point::new(32, 32);
 
     // Draw sun in the center
-    Circle::new(center, 4)
+    Circle::new(Point::new(30, 30), 4)
         .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_ORANGE))
         .draw(display)?;
 
-    // Glowing effect around the sun
-    let pulse = (libm::cos(t as f64) * 0.5 + 1.5) as u32;
-    Circle::new(center, 4 + pulse)
-        .into_styled(PrimitiveStyle::with_stroke(Rgb565::CSS_YELLOW, 1))
-        .draw(display)?;
-
     // Draw planet orbits
-    Circle::new(center, 12)
+    Circle::new(Point::new(20, 20), 24)
         .into_styled(PrimitiveStyle::with_stroke(Rgb565::CSS_DARK_GRAY, 1))
         .draw(display)?;
 
-    Circle::new(center, 20)
+    Circle::new(Point::new(12, 12), 40)
         .into_styled(PrimitiveStyle::with_stroke(Rgb565::CSS_DARK_GRAY, 1))
         .draw(display)?;
 
-    Circle::new(center, 27)
+    Circle::new(Point::new(4, 4), 56)
         .into_styled(PrimitiveStyle::with_stroke(Rgb565::CSS_DARK_GRAY, 1))
         .draw(display)?;
 
@@ -104,7 +98,7 @@ where
     let inner_x = center.x + (libm::cos(inner_angle as f64) * 12.0) as i32;
     let inner_y = center.y + (libm::sin(inner_angle as f64) * 12.0) as i32;
 
-    Circle::new(Point::new(inner_x, inner_y), 2)
+    Circle::new(Point::new(inner_x - 1, inner_y - 1), 2)
         .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_RED))
         .draw(display)?;
 
@@ -113,16 +107,16 @@ where
     let middle_x = center.x + (libm::cos(middle_angle as f64) * 20.0) as i32;
     let middle_y = center.y + (libm::sin(middle_angle as f64) * 20.0) as i32;
 
-    Circle::new(Point::new(middle_x, middle_y), 3)
+    Circle::new(Point::new(middle_x - 2, middle_y - 2), 4)
         .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_BLUE))
         .draw(display)?;
 
     // Outer planet (slowest)
     let outer_angle = t * 0.5;
-    let outer_x = center.x + (libm::cos(outer_angle as f64) * 27.0) as i32;
-    let outer_y = center.y + (libm::sin(outer_angle as f64) * 27.0) as i32;
+    let outer_x = center.x + (libm::cos(outer_angle as f64) * 28.0) as i32;
+    let outer_y = center.y + (libm::sin(outer_angle as f64) * 28.0) as i32;
 
-    Circle::new(Point::new(outer_x, outer_y), 4)
+    Circle::new(Point::new(outer_x - 2, outer_y - 2), 4)
         .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_GREEN))
         .draw(display)?;
 
@@ -147,9 +141,9 @@ where
                 if (0.0..64.0).contains(&tail_x) && (0.0..64.0).contains(&tail_y) {
                     let alpha = 1.0 - (i as f32 / 5.0);
                     let tail_color = Rgb565::new(
-                        (alpha * 31.0) as u8,
-                        (alpha * 63.0) as u8,
-                        (alpha * 31.0) as u8,
+                        (alpha * 32.0) as u8,
+                        (alpha * 64.0) as u8,
+                        (alpha * 32.0) as u8,
                     );
 
                     Circle::new(Point::new(tail_x as i32, tail_y as i32), 1)
