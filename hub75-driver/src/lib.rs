@@ -2,10 +2,10 @@
 
 use core::convert::Infallible;
 use embedded_graphics_core::{
-    Pixel,
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Size},
     pixelcolor::{Rgb565, RgbColor},
+    Pixel,
 };
 use embedded_hal::{delay::DelayNs, digital::OutputPin};
 
@@ -227,34 +227,30 @@ where
     }
 
     /// Set the row address pins based on the row number
-    pub fn set_row(&mut self, logical_row: usize) -> Result<(), E> {
+    pub fn set_row(&mut self, row: usize) -> Result<(), E> {
         // For 64x64 dual-scan panels:
-        // - Physical rows 0-15: Upper half (bank 0)
-        // - Physical rows 16-31: Lower half (bank 1)
-        let physical_row = logical_row % 16;
-        let bank = (logical_row >= 16) as u8; // 0 = top half, 1 = bottom half
 
-        if physical_row & 0x01 != 0 {
+        if row & 0x01 != 0 {
             self.a.set_high()?
         } else {
             self.a.set_low()?
         }
-        if physical_row & 0x02 != 0 {
+        if row & 0x02 != 0 {
             self.b.set_high()?
         } else {
             self.b.set_low()?
         }
-        if physical_row & 0x04 != 0 {
+        if row & 0x04 != 0 {
             self.c.set_high()?
         } else {
             self.c.set_low()?
         }
-        if physical_row & 0x08 != 0 {
+        if row & 0x08 != 0 {
             self.d.set_high()?
         } else {
             self.d.set_low()?
         }
-        if bank != 0 {
+        if row & 0x10 != 0 {
             self.e.set_high()?
         } else {
             self.e.set_low()?
@@ -421,6 +417,14 @@ where
                     // Apply gamma and brightness in-place
                     let (mut r1, mut g1, mut b1, mut r2, mut g2, mut b2) =
                         (pixel.r1, pixel.g1, pixel.b1, pixel.r2, pixel.g2, pixel.b2);
+                    // Apply brightness
+                    let brightness = self.config.brightness as u16;
+                    r1 = (r1 as u16 * brightness >> 8) as u8;
+                    g1 = (g1 as u16 * brightness >> 8) as u8;
+                    b1 = (b1 as u16 * brightness >> 8) as u8;
+                    r2 = (r2 as u16 * brightness >> 8) as u8;
+                    g2 = (g2 as u16 * brightness >> 8) as u8;
+                    b2 = (b2 as u16 * brightness >> 8) as u8;
 
                     if self.config.use_gamma_correction {
                         r1 = GAMMA8[r1 as usize];
@@ -431,29 +435,26 @@ where
                         b2 = GAMMA8[b2 as usize];
                     }
 
-                    // Apply brightness
-                    let brightness = self.config.brightness as u16;
-                    r1 = (r1 as u16 * brightness / 255) as u8;
-                    g1 = (g1 as u16 * brightness / 255) as u8;
-                    b1 = (b1 as u16 * brightness / 255) as u8;
-                    r2 = (r2 as u16 * brightness / 255) as u8;
-                    g2 = (g2 as u16 * brightness / 255) as u8;
-                    b2 = (b2 as u16 * brightness / 255) as u8;
-
                     // Bit plane comparison
                     let mask = 1 << (7 - bit_plane); // MSB first
-                    let threshold = mask - 1;
+                    let r1_active = (r1 & mask) != 0;
+                    let g1_active = (g1 & mask) != 0;
+                    let b1_active = (b1 & mask) != 0;
+
+                    let r2_active = (r2 & mask) != 0;
+                    let g2_active = (g2 & mask) != 0;
+                    let b2_active = (b2 & mask) != 0;
 
                     // Set the color pins
                     let dual_pixel = DualPixel {
-                        r1,
-                        g1,
-                        b1,
-                        r2,
-                        g2,
-                        b2,
+                        r1: r1_active as u8,
+                        g1: g1_active as u8,
+                        b1: b1_active as u8,
+                        r2: r2_active as u8,
+                        g2: g2_active as u8,
+                        b2: b2_active as u8,
                     };
-                    self.pins.set_color_pins(&dual_pixel, threshold)?;
+                    self.pins.set_color_pins(&dual_pixel, 0)?;
                     self.pins.clock_pulse()?;
                 }
 
@@ -521,7 +522,7 @@ where
                 4 => Rgb565::MAGENTA,
                 5 => Rgb565::YELLOW,
                 6 => Rgb565::WHITE,
-                _ => Rgb565::new(128, 128, 0), // Darker yellow
+                _ => Rgb565::new(255 >> 3, 128 >> 2, 0), // Orange
             };
 
             for x in 0..DISPLAY_WIDTH {
@@ -555,6 +556,25 @@ where
                 for y in 0..DISPLAY_HEIGHT {
                     self.set_pixel(i as i32, y as i32, Rgb565::BLACK);
                 }
+            }
+        }
+    }
+
+    // Draw a test gradient
+    pub fn draw_test_gradient(&mut self) {
+        self.clear();
+
+        for y in 0..DISPLAY_HEIGHT {
+            for x in 0..DISPLAY_WIDTH {
+                self.set_pixel(
+                    x as i32,
+                    y as i32,
+                    Rgb565::new(
+                        (x as usize * 32 / DISPLAY_WIDTH) as u8,
+                        32,
+                        (y as usize * 32 / DISPLAY_HEIGHT) as u8,
+                    ),
+                );
             }
         }
     }
