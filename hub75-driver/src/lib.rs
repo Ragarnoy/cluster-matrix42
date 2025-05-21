@@ -2,10 +2,10 @@
 
 use core::convert::Infallible;
 use embedded_graphics_core::{
+    Pixel,
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Size},
     pixelcolor::{Rgb565, RgbColor},
-    Pixel,
 };
 use embedded_hal::{delay::DelayNs, digital::OutputPin};
 
@@ -40,6 +40,7 @@ impl Default for FrameBuffer {
 
 impl FrameBuffer {
     /// Create a new, empty framebuffer
+    #[must_use]
     pub fn new() -> Self {
         Self {
             buffer: [[DualPixel::default(); DISPLAY_WIDTH]; ACTIVE_ROWS],
@@ -74,7 +75,7 @@ impl FrameBuffer {
 
     /// Clear the framebuffer
     pub fn clear(&mut self) {
-        for row in self.buffer.iter_mut() {
+        for row in &mut self.buffer {
             for pixel in row.iter_mut() {
                 *pixel = DualPixel::default();
             }
@@ -83,6 +84,7 @@ impl FrameBuffer {
     }
 
     /// Check if the framebuffer has been modified
+    #[must_use]
     pub fn is_modified(&self) -> bool {
         self.modified
     }
@@ -229,29 +231,29 @@ where
         // For 64x64 dual-scan panels:
 
         if row & 0x01 != 0 {
-            self.a.set_high()?
+            self.a.set_high()?;
         } else {
-            self.a.set_low()?
+            self.a.set_low()?;
         }
         if row & 0x02 != 0 {
-            self.b.set_high()?
+            self.b.set_high()?;
         } else {
-            self.b.set_low()?
+            self.b.set_low()?;
         }
         if row & 0x04 != 0 {
-            self.c.set_high()?
+            self.c.set_high()?;
         } else {
-            self.c.set_low()?
+            self.c.set_low()?;
         }
         if row & 0x08 != 0 {
-            self.d.set_high()?
+            self.d.set_high()?;
         } else {
-            self.d.set_low()?
+            self.d.set_low()?;
         }
         if row & 0x10 != 0 {
-            self.e.set_high()?
+            self.e.set_high()?;
         } else {
-            self.e.set_low()?
+            self.e.set_low()?;
         }
 
         Ok(())
@@ -261,35 +263,35 @@ where
     pub fn set_color_pins(&mut self, pixel: &DualPixel, threshold: u8) -> Result<(), E> {
         // Set the RGB pins for both halves based on the comparison with the threshold
         if pixel.r1 > threshold {
-            self.r1.set_high()?
+            self.r1.set_high()?;
         } else {
-            self.r1.set_low()?
+            self.r1.set_low()?;
         }
         if pixel.g1 > threshold {
-            self.g1.set_high()?
+            self.g1.set_high()?;
         } else {
-            self.g1.set_low()?
+            self.g1.set_low()?;
         }
         if pixel.b1 > threshold {
-            self.b1.set_high()?
+            self.b1.set_high()?;
         } else {
-            self.b1.set_low()?
+            self.b1.set_low()?;
         }
 
         if pixel.r2 > threshold {
-            self.r2.set_high()?
+            self.r2.set_high()?;
         } else {
-            self.r2.set_low()?
+            self.r2.set_low()?;
         }
         if pixel.g2 > threshold {
-            self.g2.set_high()?
+            self.g2.set_high()?;
         } else {
-            self.g2.set_low()?
+            self.g2.set_low()?;
         }
         if pixel.b2 > threshold {
-            self.b2.set_high()?
+            self.b2.set_high()?;
         } else {
-            self.b2.set_low()?
+            self.b2.set_low()?;
         }
 
         Ok(())
@@ -312,9 +314,9 @@ where
     /// Enable or disable display output
     pub fn set_output_enabled(&mut self, enabled: bool) -> Result<(), E> {
         if enabled {
-            self.oe.set_low()? // Active low
+            self.oe.set_low()?; // Active low
         } else {
-            self.oe.set_high()?
+            self.oe.set_high()?;
         }
         Ok(())
     }
@@ -416,13 +418,13 @@ where
                     let (mut r1, mut g1, mut b1, mut r2, mut g2, mut b2) =
                         (pixel.r1, pixel.g1, pixel.b1, pixel.r2, pixel.g2, pixel.b2);
                     // Apply brightness
-                    let brightness = self.config.brightness as u16;
-                    r1 = (r1 as u16 * brightness >> 8) as u8;
-                    g1 = (g1 as u16 * brightness >> 8) as u8;
-                    b1 = (b1 as u16 * brightness >> 8) as u8;
-                    r2 = (r2 as u16 * brightness >> 8) as u8;
-                    g2 = (g2 as u16 * brightness >> 8) as u8;
-                    b2 = (b2 as u16 * brightness >> 8) as u8;
+                    let brightness = u16::from(self.config.brightness);
+                    r1 = ((u16::from(r1) * brightness) >> 8) as u8;
+                    g1 = ((u16::from(g1) * brightness) >> 8) as u8;
+                    b1 = ((u16::from(b1) * brightness) >> 8) as u8;
+                    r2 = ((u16::from(r2) * brightness) >> 8) as u8;
+                    g2 = ((u16::from(g2) * brightness) >> 8) as u8;
+                    b2 = ((u16::from(b2) * brightness) >> 8) as u8;
 
                     if self.config.use_gamma_correction {
                         r1 = GAMMA8[r1 as usize];
@@ -445,12 +447,12 @@ where
 
                     // Set the color pins
                     let dual_pixel = DualPixel {
-                        r1: r1_active as u8,
-                        g1: g1_active as u8,
-                        b1: b1_active as u8,
-                        r2: r2_active as u8,
-                        g2: g2_active as u8,
-                        b2: b2_active as u8,
+                        r1: u8::from(r1_active),
+                        g1: u8::from(g1_active),
+                        b1: u8::from(b1_active),
+                        r2: u8::from(r2_active),
+                        g2: u8::from(g2_active),
+                        b2: u8::from(b2_active),
                     };
                     self.pins.set_color_pins(&dual_pixel, 0)?;
                     self.pins.clock_pulse()?;
@@ -568,9 +570,9 @@ where
                     x as i32,
                     y as i32,
                     Rgb565::new(
-                        (x as usize * 32 / DISPLAY_WIDTH) as u8,
+                        (x * 32 / DISPLAY_WIDTH) as u8,
                         32,
-                        (y as usize * 32 / DISPLAY_HEIGHT) as u8,
+                        (y * 32 / DISPLAY_HEIGHT) as u8,
                     ),
                 );
             }

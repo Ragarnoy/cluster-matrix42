@@ -19,7 +19,7 @@ use heapless;
 
 /// Draws a frame of the solar system animation
 ///
-/// This function is designed to work with any DrawTarget that supports Rgb565 colors.
+/// This function is designed to work with any `DrawTarget` that supports Rgb565 colors.
 /// It can be used in both std and no-std environments.
 pub fn draw_animation_frame<D>(display: &mut D, frame: u32) -> Result<(), D::Error>
 where
@@ -62,7 +62,7 @@ where
     for (i, (x, y)) in star_positions.iter().enumerate() {
         // Each star blinks at a different rate
         let star_time = t + (i as f32 * 0.5);
-        let brightness = ((libm::sin(star_time as f64) * 0.5 + 0.5) * 32.0) as u8;
+        let brightness = ((libm::sin(f64::from(star_time)) * 0.5 + 0.5) * 32.0) as u8;
 
         if brightness > 5 {
             let star_color = Rgb565::new(brightness, brightness, brightness);
@@ -95,8 +95,8 @@ where
 
     // Inner planet (fastest)
     let inner_angle = t * 1.5;
-    let inner_x = center.x + (libm::cos(inner_angle as f64) * 12.0) as i32;
-    let inner_y = center.y + (libm::sin(inner_angle as f64) * 12.0) as i32;
+    let inner_x = center.x + (libm::cos(f64::from(inner_angle)) * 12.0) as i32;
+    let inner_y = center.y + (libm::sin(f64::from(inner_angle)) * 12.0) as i32;
 
     Circle::new(Point::new(inner_x - 1, inner_y - 1), 2)
         .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_RED))
@@ -104,8 +104,8 @@ where
 
     // Middle planet
     let middle_angle = t * 0.8;
-    let middle_x = center.x + (libm::cos(middle_angle as f64) * 20.0) as i32;
-    let middle_y = center.y + (libm::sin(middle_angle as f64) * 20.0) as i32;
+    let middle_x = center.x + (libm::cos(f64::from(middle_angle)) * 20.0) as i32;
+    let middle_y = center.y + (libm::sin(f64::from(middle_angle)) * 20.0) as i32;
 
     Circle::new(Point::new(middle_x - 2, middle_y - 2), 4)
         .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_BLUE))
@@ -113,8 +113,8 @@ where
 
     // Outer planet (slowest)
     let outer_angle = t * 0.5;
-    let outer_x = center.x + (libm::cos(outer_angle as f64) * 28.0) as i32;
-    let outer_y = center.y + (libm::sin(outer_angle as f64) * 28.0) as i32;
+    let outer_x = center.x + (libm::cos(f64::from(outer_angle)) * 28.0) as i32;
+    let outer_y = center.y + (libm::sin(f64::from(outer_angle)) * 28.0) as i32;
 
     Circle::new(Point::new(outer_x - 2, outer_y - 2), 4)
         .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_GREEN))
