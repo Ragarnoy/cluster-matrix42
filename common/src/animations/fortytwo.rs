@@ -6,7 +6,11 @@ use embedded_graphics::{
 };
 
 fn project(v: Vec3, d: f32, scale: f32) -> Vec3 {
-    let factor = scale / (v.z + d);
+    let denominator = v.z + d;
+    if denominator.abs() < f32::EPSILON {
+        return Vec3::new(0.0, 0.0, 0.0);
+    }
+    let factor = scale / denominator;
 
     Vec3::new(v.x * factor, v.y * factor, 0.)
 }
