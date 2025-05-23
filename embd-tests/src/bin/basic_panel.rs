@@ -141,7 +141,9 @@ async fn matrix_task(
         // Timer::after(Duration::from_micros(1)).await;
 
         // Update the display
-        display.update(&mut delay);
+        if let Err(e) = display.update(&mut delay) {
+            defmt::error!("Display update failed: {:?}", e);
+        }
 
         // Increment frame counter
         frame_counter = frame_counter.wrapping_add(1);
