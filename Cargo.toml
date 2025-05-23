@@ -3,6 +3,7 @@ resolver = "3"
 members = [ "common",
     "embd-tests",
     "hub75-driver",
+    "hub75-rp2350-driver",
     "simulator"
 ]
 
@@ -17,6 +18,7 @@ lto = true
 [workspace.dependencies]
 # Local dependencies
 hub75-driver = { path = "hub75-driver" }
+hub75-rp2350-driver = { path = "hub75-rp2350-driver" }
 
 # Embedded dependencies
 embedded-hal = { version = "1.0" }

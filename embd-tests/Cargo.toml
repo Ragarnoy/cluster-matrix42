@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-hub75-driver = { workspace = true }
+hub75-rp2350-driver = { workspace = true }
 common = { path = "../common" }
 
 # Logging dependencies
+defmt = { version = "1.0.1" }
 defmt-rtt = { workspace = true }
 panic-probe = { workspace = true, features = ["print-defmt"] }
 
@@ -16,8 +17,6 @@ cortex-m-rt = { workspace = true }
 embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa", "binary-info", "intrinsics"] }
 embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
-embassy-usb-logger = { workspace = true }
-log = { workspace = true }
 smart-leds = { workspace = true }
 static_cell = { workspace = true }
 
