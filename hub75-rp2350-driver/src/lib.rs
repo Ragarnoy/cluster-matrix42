@@ -8,7 +8,7 @@ use embedded_graphics_core::{
     geometry::{OriginDimensions, Size},
     pixelcolor::{Rgb565, RgbColor},
 };
-use embedded_hal::{delay::DelayNs};
+use embedded_hal::delay::DelayNs;
 use pins::{DualPixel, Hub75Pins};
 
 /// Constants for the display dimensions
@@ -91,16 +91,16 @@ pub struct Hub75Config {
     pub pwm_bits: u8,               // Number of bits for PWM (1-8)
     pub brightness: u8,             // Overall brightness (0-255)
     pub use_gamma_correction: bool, // Apply gamma correction to colors
-    pub row_step_time_us: u32,      // Delay between row updates
+    pub clock_delay_ns: u32,        // Delay for clock pulses in nanoseconds
 }
 
 impl Default for Hub75Config {
     fn default() -> Self {
         Self {
             pwm_bits: 6,                // 6-bit PWM
-            brightness: 255,            // High brightness
+            brightness: 255,            // Full brightness
             use_gamma_correction: true, // Enable gamma correction for better visuals
-            row_step_time_us: 1,        // 1µs delay between row transitions
+            clock_delay_ns: 100,        // 100ns clock delay
         }
     }
 }
@@ -128,7 +128,7 @@ pub struct Hub75 {
 }
 
 impl Hub75 {
-    /// Create a new Hub75 driver with default configuration
+    /// Create a new Hub75 driver with the default configuration
     pub fn new(pins: Hub75Pins) -> Self {
         Self::new_with_config(pins, Hub75Config::default())
     }
@@ -150,110 +150,105 @@ impl Hub75 {
     }
 
     /// Update the display with the current framebuffer contents
-    pub fn update(&mut self, delay: &mut impl DelayNs) {
+    pub fn update(&mut self, delay: &mut impl DelayNs) -> Result<(), Infallible> {
         // Only update if the framebuffer has changed
         if !self.framebuffer.is_modified() {
-            return;
+            return Ok(());
         }
 
-        // Start with output disabled
-        self.pins.set_output_enabled(false);
+        // Process each bit plane using Binary Code Modulation (BCM)
+        for bit_plane in 0..self.config.pwm_bits {
+            // Process each row
+            for row in 0..ACTIVE_ROWS {
+                // Disable output while shifting in data
+                self.pins.set_output_enabled(false);
 
-        // Correct PWM bit plane implementation - directly use the bit count
-        let num_bit_planes = self.config.pwm_bits as usize;
-
-        // Process each row
-        for row in 0..ACTIVE_ROWS {
-            // For each bit position in PWM sequence (binary-coded modulation)
-            for bit_plane in 0..num_bit_planes {
-                // Calculate the bit mask for this bit position
-                // MSB (highest bit_plane) has the largest weight and should be displayed longest
-                let bit_position = num_bit_planes - 1 - bit_plane;
-
-                // Shift in the data for this row
+                // Shift in all the pixels for this row
                 for col in 0..DISPLAY_WIDTH {
-                    let pixel = self.framebuffer.buffer[row][col];
+                    let pixel = &self.framebuffer.buffer[row][col];
 
-                    // Apply gamma and brightness in-place
-                    let (r1, g1, b1, r2, g2, b2) =
-                        (pixel.r1, pixel.g1, pixel.b1, pixel.r2, pixel.g2, pixel.b2);
-                    // Apply brightness
+                    // Extract the bit for this bit plane
+                    // Use bit_plane directly as the shift amount (LSB to MSB)
+                    let shift = bit_plane;
 
+                    let r1_bit = (pixel.r1 >> shift) & 1;
+                    let g1_bit = (pixel.g1 >> shift) & 1;
+                    let b1_bit = (pixel.b1 >> shift) & 1;
 
-                    // Bit plane comparison
-                    let mask = 1 << (7 - bit_plane); // MSB first
-                    let r1_active = (r1 & mask) != 0;
-                    let g1_active = (g1 & mask) != 0;
-                    let b1_active = (b1 & mask) != 0;
+                    let r2_bit = (pixel.r2 >> shift) & 1;
+                    let g2_bit = (pixel.g2 >> shift) & 1;
+                    let b2_bit = (pixel.b2 >> shift) & 1;
 
-                    let r2_active = (r2 & mask) != 0;
-                    let g2_active = (g2 & mask) != 0;
-                    let b2_active = (b2 & mask) != 0;
+                    // Set the color pins based on the extracted bits
+                    self.pins
+                        .set_color_bits(r1_bit, g1_bit, b1_bit, r2_bit, g2_bit, b2_bit);
 
-                    // Set the color pins
-                    let dual_pixel = DualPixel {
-                        r1: u8::from(r1_active),
-                        g1: u8::from(g1_active),
-                        b1: u8::from(b1_active),
-                        r2: u8::from(r2_active),
-                        g2: u8::from(g2_active),
-                        b2: u8::from(b2_active),
-                    };
-                    self.pins.set_color_pins(&dual_pixel, 0);
-                    self.pins.clock_pulse();
+                    // Clock the data
+                    self.pins
+                        .clock_pulse_with_delay(delay, self.config.clock_delay_ns);
                 }
 
-                // Latch the data
-                self.pins.latch();
+                // Latch the row data
+                self.pins.latch_with_delay(delay);
 
-                // Set row address
+                // Set the row address
                 self.pins.set_row(row);
 
                 // Enable output
                 self.pins.set_output_enabled(true);
 
-                // Hold proportionally to the bit weight (binary coded modulation)
-                // MSB (bit_position = pwm_bits-1) should be displayed longest
-                let hold_time = (1 << bit_position) * self.config.row_step_time_us;
-                delay.delay_us(hold_time);
+                // Hold for a duration proportional to the bit weight
+                // For BCM, each bit plane is displayed for 2^bit_plane time units
+                let hold_time_us = 1u32 << bit_plane;
+                delay.delay_us(hold_time_us);
 
-                // Disable output before next bit plane
+                // Disable output before moving to the next row
                 self.pins.set_output_enabled(false);
 
                 // Small delay to prevent ghosting
-                delay.delay_ns(1);
+                delay.delay_ns(50);
             }
         }
 
-        // Mark framebuffer as updated
+        // Mark the framebuffer as updated
         self.framebuffer.reset_modified();
+
+        Ok(())
     }
 
     /// Set a pixel in the framebuffer
     pub fn set_pixel(&mut self, x: i32, y: i32, color: Rgb565) {
-        // Convert Rgb565 to 8-bit linear scale
-        let mut r = color.r() << 3; // 5-bit -> 8-bit
-        let mut g = color.g() << 2; // 6-bit -> 8-bit
-        let mut b = color.b() << 3;
+        if x < 0 || y < 0 || x >= DISPLAY_WIDTH as i32 || y >= DISPLAY_HEIGHT as i32 {
+            return;
+        }
 
-        let brightness = u16::from(self.config.brightness);
-        r = ((u16::from(r) * brightness) >> 8) as u8;
-        g = ((u16::from(g) * brightness) >> 8) as u8;
-        b = ((u16::from(b) * brightness) >> 8) as u8;
+        // Convert Rgb565 to 8-bit values
+        let mut r = (color.r() as u16 * 255 / 31) as u8;
+        let mut g = (color.g() as u16 * 255 / 63) as u8;
+        let mut b = (color.b() as u16 * 255 / 31) as u8;
 
+        // Apply brightness scaling
+        if self.config.brightness < 255 {
+            let brightness = self.config.brightness as u16;
+            r = ((r as u16 * brightness) / 255) as u8;
+            g = ((g as u16 * brightness) / 255) as u8;
+            b = ((b as u16 * brightness) / 255) as u8;
+        }
+
+        // Apply gamma correction if enabled
         if self.config.use_gamma_correction {
             r = GAMMA8[r as usize];
             g = GAMMA8[g as usize];
             b = GAMMA8[b as usize];
         }
 
-        // Swap the colors to match the hardware configuration
-        // Based on your description: blue→green, green→red, red→blue
-        let r_final = b; // Red pin receives what should be blue
-        let g_final = r; // Green pin receives what should be red
-        let b_final = g; // Blue pin receives what should be green
+        // Scale down to PWM bit depth
+        let shift = 8 - self.config.pwm_bits;
+        r >>= shift;
+        g >>= shift;
+        b >>= shift;
 
-        self.framebuffer.set_pixel(x as usize, y as usize, r_final, g_final, b_final);
+        self.framebuffer.set_pixel(x as usize, y as usize, r, g, b);
     }
 
     /// Clear the framebuffer
@@ -263,7 +258,6 @@ impl Hub75 {
 
     /// Draw a test pattern to verify correct row mapping and scanning
     pub fn draw_test_pattern(&mut self) {
-        // Clear the framebuffer first
         self.clear();
 
         // Draw horizontal color bands
@@ -276,7 +270,7 @@ impl Hub75 {
                 4 => Rgb565::MAGENTA,
                 5 => Rgb565::YELLOW,
                 6 => Rgb565::WHITE,
-                _ => Rgb565::new(255 >> 3, 128 >> 2, 0), // Orange
+                _ => Rgb565::new(31, 32, 0), // Orange
             };
 
             for x in 0..DISPLAY_WIDTH {
@@ -284,58 +278,31 @@ impl Hub75 {
             }
         }
 
-        // Add a diagonal line for visual confirmation
-        for i in 0..DISPLAY_HEIGHT {
+        // Add diagonal lines
+        for i in 0..DISPLAY_HEIGHT.min(DISPLAY_WIDTH) {
             self.set_pixel(i as i32, i as i32, Rgb565::WHITE);
-            // Draw a thicker line for better visibility
-            if i > 0 {
-                self.set_pixel(i as i32 - 1, i as i32, Rgb565::WHITE);
-            }
-            if i < DISPLAY_WIDTH - 1 {
-                self.set_pixel(i as i32 + 1, i as i32, Rgb565::WHITE);
-            }
-        }
-
-        // Draw a grid pattern
-        for i in 0..DISPLAY_HEIGHT {
-            if i % 8 == 0 {
-                for x in 0..DISPLAY_WIDTH {
-                    self.set_pixel(x as i32, i as i32, Rgb565::BLACK);
-                }
-            }
-        }
-
-        for i in 0..DISPLAY_WIDTH {
-            if i % 8 == 0 {
-                for y in 0..DISPLAY_HEIGHT {
-                    self.set_pixel(i as i32, y as i32, Rgb565::BLACK);
-                }
-            }
+            self.set_pixel((DISPLAY_WIDTH - 1 - i) as i32, i as i32, Rgb565::WHITE);
         }
     }
 
-    // Draw a test gradient
+    /// Draw a test gradient
     pub fn draw_test_gradient(&mut self) {
         self.clear();
 
         for y in 0..DISPLAY_HEIGHT {
             for x in 0..DISPLAY_WIDTH {
-                self.set_pixel(
-                    x as i32,
-                    y as i32,
-                    Rgb565::new(
-                        (x * 32 / DISPLAY_WIDTH) as u8,
-                        32,
-                        (y * 32 / DISPLAY_HEIGHT) as u8,
-                    ),
-                );
+                let r = (x * 31 / (DISPLAY_WIDTH - 1)) as u8;
+                let g = (y * 63 / (DISPLAY_HEIGHT - 1)) as u8;
+                let b = ((x + y) * 31 / (DISPLAY_WIDTH + DISPLAY_HEIGHT - 2)) as u8;
+
+                self.set_pixel(x as i32, y as i32, Rgb565::new(r, g, b));
             }
         }
     }
 }
 
 // Implement embedded-graphics interfaces
-impl OriginDimensions for Hub75  {
+impl OriginDimensions for Hub75 {
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }
