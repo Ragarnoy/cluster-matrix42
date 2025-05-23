@@ -65,7 +65,7 @@ where
         let brightness = ((libm::sin(f64::from(star_time)) * 0.5 + 0.5) * 32.0) as u8;
 
         if brightness > 5 {
-            let star_color = Rgb565::new(brightness, brightness, brightness);
+            let star_color = Rgb565::new(brightness, brightness << 1, (y >> 1) as u8);
 
             // Draw the star as a single pixel
             Pixel(Point::new(*x, *y), star_color).draw(display)?;
