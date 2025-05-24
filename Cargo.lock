@@ -437,7 +437,6 @@ dependencies = [
  "pio",
  "rand_core 0.6.4",
  "rand_core 0.9.3",
- "rp-binary-info",
  "rp-pac",
  "rp2040-boot2",
  "sha2-const-stable",
@@ -510,7 +509,6 @@ dependencies = [
  "embassy-executor",
  "embassy-rp",
  "embassy-time",
- "embedded-graphics",
  "hub75-rp2350-driver",
  "panic-probe",
  "static_cell",
@@ -1265,12 +1263,6 @@ checksum = "57397d16646700483b67d2dd6511d79318f9d057fdbd21a4066aeac8b41d310a"
 dependencies = [
  "bytemuck",
 ]
-
-[[package]]
-name = "rp-binary-info"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88ed2051a0bf2c726df01cfce378ed8a367be2a6e402fc183857f429a346d429"
 
 [[package]]
 name = "rp-pac"
