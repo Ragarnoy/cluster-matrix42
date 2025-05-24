@@ -4,34 +4,18 @@
 #![no_std]
 
 // Compile-time check to ensure only one color mapping is selected
-#[cfg(all(
-    feature = "mapping-brg",
-    any(
-        feature = "mapping-gbr",
-        feature = "mapping-bgr",
-        feature = "mapping-rbg",
-        feature = "mapping-grb"
-    )
+#[cfg(any(
+    all(feature = "mapping-brg", feature = "mapping-gbr"),
+    all(feature = "mapping-brg", feature = "mapping-bgr"),
+    all(feature = "mapping-brg", feature = "mapping-rbg"),
+    all(feature = "mapping-brg", feature = "mapping-grb"),
+    all(feature = "mapping-gbr", feature = "mapping-bgr"),
+    all(feature = "mapping-gbr", feature = "mapping-rbg"),
+    all(feature = "mapping-gbr", feature = "mapping-grb"),
+    all(feature = "mapping-bgr", feature = "mapping-rbg"),
+    all(feature = "mapping-bgr", feature = "mapping-grb"),
+    all(feature = "mapping-rbg", feature = "mapping-grb"),
 ))]
-compile_error!("Only one color mapping feature can be enabled at a time");
-
-#[cfg(all(
-    feature = "mapping-gbr",
-    any(
-        feature = "mapping-bgr",
-        feature = "mapping-rbg",
-        feature = "mapping-grb"
-    )
-))]
-compile_error!("Only one color mapping feature can be enabled at a time");
-
-#[cfg(all(
-    feature = "mapping-bgr",
-    any(feature = "mapping-rbg", feature = "mapping-grb")
-))]
-compile_error!("Only one color mapping feature can be enabled at a time");
-
-#[cfg(all(feature = "mapping-rbg", feature = "mapping-grb"))]
 compile_error!("Only one color mapping feature can be enabled at a time");
 
 pub mod pins;
