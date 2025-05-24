@@ -1,11 +1,6 @@
 //! Multicore Hub75 LED Matrix Demo for 64x64 display with Embassy
-//! Core 0: Controls Hub75 LED matrix and WS2812 LED
-//! Core 1: Handles USB logging
-//!
-//! Features:
-//! - Brightness cycling between very dim, dim, normal, and bright
-//! - WS2812 LED blinking with rainbow colors
-//! - USB logging from Core 1
+//! Core 0: Controls Hub75 LED matrix
+//! Core 1: Handles led blinking
 
 #![no_std]
 #![no_main]
@@ -25,8 +20,8 @@ use {defmt_rtt as _, panic_probe as _};
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-/// Input a value 0 to 255 to get a color value
-/// The colours are a transition r - g - b - back to r.
+/// Input value 0 to 255 to get a color value
+/// The colors are a transition r - g - b - back to r.
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
