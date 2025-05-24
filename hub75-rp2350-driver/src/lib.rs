@@ -1,4 +1,38 @@
+//! Hub75 LED Matrix Driver for RP2350
+//!
+//! This driver supports 64x64 LED matrices using the HUB75 protocol.
 #![no_std]
+
+// Compile-time check to ensure only one color mapping is selected
+#[cfg(all(
+    feature = "mapping-brg",
+    any(
+        feature = "mapping-gbr",
+        feature = "mapping-bgr",
+        feature = "mapping-rbg",
+        feature = "mapping-grb"
+    )
+))]
+compile_error!("Only one color mapping feature can be enabled at a time");
+
+#[cfg(all(
+    feature = "mapping-gbr",
+    any(
+        feature = "mapping-bgr",
+        feature = "mapping-rbg",
+        feature = "mapping-grb"
+    )
+))]
+compile_error!("Only one color mapping feature can be enabled at a time");
+
+#[cfg(all(
+    feature = "mapping-bgr",
+    any(feature = "mapping-rbg", feature = "mapping-grb")
+))]
+compile_error!("Only one color mapping feature can be enabled at a time");
+
+#[cfg(all(feature = "mapping-rbg", feature = "mapping-grb"))]
+compile_error!("Only one color mapping feature can be enabled at a time");
 
 pub mod pins;
 use core::convert::Infallible;
@@ -128,7 +162,7 @@ pub struct Hub75 {
 }
 
 impl Hub75 {
-    /// Create a new Hub75 driver with the default configuration
+    /// Create a new Hub75 driver with default configuration
     pub fn new(pins: Hub75Pins) -> Self {
         Self::new_with_config(pins, Hub75Config::default())
     }
@@ -202,15 +236,15 @@ impl Hub75 {
                 let hold_time_us = 1u32 << bit_plane;
                 delay.delay_us(hold_time_us);
 
-                // Disable output before moving to the next row
+                // Disable output before moving to next row
                 self.pins.set_output_enabled(false);
 
                 // Small delay to prevent ghosting
-                delay.delay_ns(50);
+                delay.delay_ns(100);
             }
         }
 
-        // Mark the framebuffer as updated
+        // Mark framebuffer as updated
         self.framebuffer.reset_modified();
 
         Ok(())
@@ -248,7 +282,34 @@ impl Hub75 {
         g >>= shift;
         b >>= shift;
 
-        self.framebuffer.set_pixel(x as usize, y as usize, r, g, b);
+        // Apply hardware color mapping based on feature flags
+        #[cfg(feature = "mapping-brg")]
+        let (r_final, g_final, b_final) = (b, r, g); // Blue→Red, Red→Green, Green→Blue
+
+        #[cfg(feature = "mapping-gbr")]
+        let (r_final, g_final, b_final) = (g, b, r); // Green→Red, Blue→Green, Red→Blue
+
+        #[cfg(feature = "mapping-bgr")]
+        let (r_final, g_final, b_final) = (b, g, r); // Blue→Red, Green→Green, Red→Blue
+
+        #[cfg(feature = "mapping-rbg")]
+        let (r_final, g_final, b_final) = (r, b, g); // Red→Red, Blue→Green, Green→Blue
+
+        #[cfg(feature = "mapping-grb")]
+        let (r_final, g_final, b_final) = (g, r, b); // Green→Red, Red→Green, Blue→Blue
+
+        // Default to standard RGB mapping if no feature is selected
+        #[cfg(not(any(
+            feature = "mapping-brg",
+            feature = "mapping-gbr",
+            feature = "mapping-bgr",
+            feature = "mapping-rbg",
+            feature = "mapping-grb"
+        )))]
+        let (r_final, g_final, b_final) = (r, g, b);
+
+        self.framebuffer
+            .set_pixel(x as usize, y as usize, r_final, g_final, b_final);
     }
 
     /// Clear the framebuffer
@@ -286,6 +347,12 @@ impl Hub75 {
     }
 
     /// Draw a test gradient
+    ///
+    /// Creates an RGB gradient that will appear differently based on
+    /// the color mapping feature selected at compile time:
+    ///
+    /// - Standard RGB: Red increases left→right, Green top→bottom
+    /// - BRG mapping: Actual display shows different colors due to hardware remapping
     pub fn draw_test_gradient(&mut self) {
         self.clear();
 
@@ -296,6 +363,45 @@ impl Hub75 {
                 let b = ((x + y) * 31 / (DISPLAY_WIDTH + DISPLAY_HEIGHT - 2)) as u8;
 
                 self.set_pixel(x as i32, y as i32, Rgb565::new(r, g, b));
+            }
+        }
+    }
+
+    /// Draw a color channel test to verify hardware mapping
+    ///
+    /// This displays three vertical bands showing pure color channels:
+    /// - Left third: Should appear RED (if mapping is correct)
+    /// - Middle third: Should appear GREEN (if mapping is correct)
+    /// - Right third: Should appear BLUE (if mapping is correct)
+    ///
+    /// If the colors don't match expectations, try a different mapping feature:
+    /// - If you see BGR instead of RGB, use `mapping-bgr`
+    /// - If you see BRG instead of RGB, use `mapping-brg`
+    /// - If you see GBR instead of RGB, use `mapping-gbr`
+    /// - If you see GRB instead of RGB, use `mapping-grb`
+    /// - If you see RBG instead of RGB, use `mapping-rbg`
+    pub fn draw_channel_test(&mut self) {
+        self.clear();
+
+        // Divide screen into 3 vertical sections
+        let section_width = DISPLAY_WIDTH / 3;
+
+        for y in 0..DISPLAY_HEIGHT {
+            for x in 0..DISPLAY_WIDTH {
+                let intensity = (y * 63 / (DISPLAY_HEIGHT - 1)) as u8;
+
+                let color = if x < section_width {
+                    // Left third: Pure red gradient
+                    Rgb565::new(intensity >> 1, 0, 0)
+                } else if x < section_width * 2 {
+                    // Middle third: Pure green gradient
+                    Rgb565::new(0, intensity, 0)
+                } else {
+                    // Right third: Pure blue gradient
+                    Rgb565::new(0, 0, intensity >> 1)
+                };
+
+                self.set_pixel(x as i32, y as i32, color);
             }
         }
     }

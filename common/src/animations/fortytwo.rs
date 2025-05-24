@@ -1,4 +1,3 @@
-use embedded_graphics::primitives::StyledDrawable;
 use embedded_graphics::{
     pixelcolor::Rgb565,
     prelude::{DrawTarget, Drawable, Point, Primitive, RgbColor},

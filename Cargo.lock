@@ -351,7 +351,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 [[package]]
 name = "embassy-embedded-hal"
 version = "0.3.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "embassy-futures",
  "embassy-hal-internal",
@@ -368,7 +368,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor"
 version = "0.7.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "cortex-m",
  "critical-section",
@@ -380,7 +380,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor-macros"
 version = "0.6.2"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -391,12 +391,12 @@ dependencies = [
 [[package]]
 name = "embassy-futures"
 version = "0.1.1"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 
 [[package]]
 name = "embassy-hal-internal"
 version = "0.2.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "cortex-m",
  "critical-section",
@@ -407,7 +407,7 @@ dependencies = [
 [[package]]
 name = "embassy-rp"
 version = "0.4.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "atomic-polyfill",
  "cfg-if",
@@ -446,8 +446,8 @@ dependencies = [
 
 [[package]]
 name = "embassy-sync"
-version = "0.6.2"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+version = "0.7.0"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -460,7 +460,7 @@ dependencies = [
 [[package]]
 name = "embassy-time"
 version = "0.4.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -476,7 +476,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-driver"
 version = "0.2.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "document-features",
 ]
@@ -484,7 +484,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-queue-utils"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "embassy-executor",
  "heapless",
@@ -493,7 +493,7 @@ dependencies = [
 [[package]]
 name = "embassy-usb-driver"
 version = "0.1.0"
-source = "git+https://github.com/embassy-rs/embassy#f915903f0e0db45049197d49b3aadd8e3c50f111"
+source = "git+https://github.com/embassy-rs/embassy#94f9b2707486ca3eade5bf4b237edf3d6aa90f35"
 dependencies = [
  "defmt",
  "embedded-io-async",
@@ -787,7 +787,6 @@ name = "hub75-rp2350-driver"
 version = "0.1.0"
 dependencies = [
  "embassy-rp",
- "embassy-time",
  "embedded-graphics-core",
  "embedded-hal 1.0.0",
 ]
@@ -840,9 +839,9 @@ dependencies = [
 
 [[package]]
 name = "lalrpop"
-version = "0.22.1"
+version = "0.22.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7047a26de42016abf8f181b46b398aef0b77ad46711df41847f6ed869a2a1d5b"
+checksum = "ba4ebbd48ce411c1d10fb35185f5a51a7bfa3d8b24b4e330d30c9e3a34129501"
 dependencies = [
  "ascii-canvas",
  "bit-set",
@@ -862,9 +861,9 @@ dependencies = [
 
 [[package]]
 name = "lalrpop-util"
-version = "0.22.1"
+version = "0.22.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8d05b3fe34b8bd562c338db725dfa9beb9451a48f65f129ccb9538b48d2c93b"
+checksum = "b5baa5e9ff84f1aefd264e6869907646538a52147a755d494517a8007fb48733"
 dependencies = [
  "regex-automata",
  "rustversion",
@@ -1303,9 +1302,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
+checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
 name = "same-file"
