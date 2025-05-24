@@ -229,9 +229,9 @@ impl Hub75Pins {
     /// Latch the data with a delay
     pub fn latch_with_delay(&mut self, delay: &mut impl DelayNs) {
         self.lat.set_high();
-        delay.delay_ns(10); // 100ns latch pulse
+        delay.delay_ns(100); // 100ns latch pulse
         self.lat.set_low();
-        delay.delay_ns(10); // Hold time after latch
+        delay.delay_ns(100); // Hold time after latch
     }
 
     /// Enable or disable display output
