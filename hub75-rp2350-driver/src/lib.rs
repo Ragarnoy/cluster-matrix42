@@ -1,4 +1,22 @@
+//! Hub75 LED Matrix Driver for RP2350
+//!
+//! This driver supports 64x64 LED matrices using the HUB75 protocol.
 #![no_std]
+
+// Compile-time check to ensure only one color mapping is selected
+#[cfg(any(
+    all(feature = "mapping-brg", feature = "mapping-gbr"),
+    all(feature = "mapping-brg", feature = "mapping-bgr"),
+    all(feature = "mapping-brg", feature = "mapping-rbg"),
+    all(feature = "mapping-brg", feature = "mapping-grb"),
+    all(feature = "mapping-gbr", feature = "mapping-bgr"),
+    all(feature = "mapping-gbr", feature = "mapping-rbg"),
+    all(feature = "mapping-gbr", feature = "mapping-grb"),
+    all(feature = "mapping-bgr", feature = "mapping-rbg"),
+    all(feature = "mapping-bgr", feature = "mapping-grb"),
+    all(feature = "mapping-rbg", feature = "mapping-grb"),
+))]
+compile_error!("Only one color mapping feature can be enabled at a time");
 
 pub mod pins;
 use core::convert::Infallible;
@@ -8,7 +26,7 @@ use embedded_graphics_core::{
     geometry::{OriginDimensions, Size},
     pixelcolor::{Rgb565, RgbColor},
 };
-use embedded_hal::{delay::DelayNs};
+use embedded_hal::delay::DelayNs;
 use pins::{DualPixel, Hub75Pins};
 
 /// Constants for the display dimensions
@@ -91,16 +109,16 @@ pub struct Hub75Config {
     pub pwm_bits: u8,               // Number of bits for PWM (1-8)
     pub brightness: u8,             // Overall brightness (0-255)
     pub use_gamma_correction: bool, // Apply gamma correction to colors
-    pub row_step_time_us: u32,      // Delay between row updates
+    pub clock_delay_ns: u32,        // Delay for clock pulses in nanoseconds
 }
 
 impl Default for Hub75Config {
     fn default() -> Self {
         Self {
             pwm_bits: 6,                // 6-bit PWM
-            brightness: 255,            // High brightness
+            brightness: 255,            // Full brightness
             use_gamma_correction: true, // Enable gamma correction for better visuals
-            row_step_time_us: 1,        // 1µs delay between row transitions
+            clock_delay_ns: 100,        // 100ns clock delay
         }
     }
 }
@@ -125,6 +143,9 @@ pub struct Hub75 {
     pins: Hub75Pins,
     pub config: Hub75Config,
     framebuffer: FrameBuffer,
+    r_lut: [u8; 32], // 5-bit input (Rgb565 red channel)
+    g_lut: [u8; 64], // 6-bit input (Rgb565 green channel)
+    b_lut: [u8; 32], // 5-bit input (Rgb565 blue channel)
 }
 
 impl Hub75 {
@@ -136,124 +157,198 @@ impl Hub75 {
     /// Create a new Hub75 driver with custom configuration
     pub fn new_with_config(pins: Hub75Pins, config: Hub75Config) -> Self {
         let framebuffer = FrameBuffer::new();
-
-        Self {
+        let mut driver = Self {
             pins,
             config,
             framebuffer,
-        }
+            r_lut: [0; 32],
+            g_lut: [0; 64],
+            b_lut: [0; 32],
+        };
+        driver.update_luts(); // Initialize LUTs
+        driver
     }
 
     /// Update the configuration
     pub fn set_config(&mut self, config: Hub75Config) {
         self.config = config;
+        self.update_luts(); // Rebuild LUTs on config change
+    }
+
+    fn update_luts(&mut self) {
+        let brightness = self.config.brightness as u16;
+        let shift = 8 - self.config.pwm_bits;
+        let use_gamma = self.config.use_gamma_correction;
+
+        // Precompute red LUT (5-bit input)
+        for i in 0..32 {
+            // Original conversion from Rgb565 to 8-bit
+            let mut val = (i as u16 * 255) / 31;
+
+            // Apply brightness
+            if brightness < 255 {
+                val = (val * brightness) / 255;
+            }
+
+            // Apply gamma correction
+            let val_8bit = if use_gamma {
+                GAMMA8[val as usize]
+            } else {
+                val as u8
+            };
+
+            // Scale to PWM bit depth
+            self.r_lut[i as usize] = val_8bit >> shift;
+        }
+
+        // Precompute green LUT (6-bit input)
+        for i in 0..64 {
+            // Original conversion from Rgb565 to 8-bit
+            let mut val = (i as u16 * 255) / 63;
+
+            // Apply brightness
+            if brightness < 255 {
+                val = (val * brightness) / 255;
+            }
+
+            // Apply gamma correction
+            let val_8bit = if use_gamma {
+                GAMMA8[val as usize]
+            } else {
+                val as u8
+            };
+
+            // Scale to PWM bit depth
+            self.g_lut[i as usize] = val_8bit >> shift;
+        }
+
+        // Precompute blue LUT (5-bit input)
+        for i in 0..32 {
+            // Original conversion from Rgb565 to 8-bit
+            let mut val = (i as u16 * 255) / 31;
+
+            // Apply brightness
+            if brightness < 255 {
+                val = (val * brightness) / 255;
+            }
+
+            // Apply gamma correction
+            let val_8bit = if use_gamma {
+                GAMMA8[val as usize]
+            } else {
+                val as u8
+            };
+
+            // Scale to PWM bit depth
+            self.b_lut[i as usize] = val_8bit >> shift;
+        }
     }
 
     /// Update the display with the current framebuffer contents
-    pub fn update(&mut self, delay: &mut impl DelayNs) {
+    pub fn update(&mut self, delay: &mut impl DelayNs) -> Result<(), Infallible> {
         // Only update if the framebuffer has changed
         if !self.framebuffer.is_modified() {
-            return;
+            return Ok(());
         }
 
-        // Start with output disabled
-        self.pins.set_output_enabled(false);
+        // Process each bit plane using Binary Code Modulation (BCM)
+        for bit_plane in 0..self.config.pwm_bits {
+            // Process each row
+            for row in 0..ACTIVE_ROWS {
+                // Disable output while shifting in data
+                self.pins.set_output_enabled(false);
 
-        // Correct PWM bit plane implementation - directly use the bit count
-        let num_bit_planes = self.config.pwm_bits as usize;
-
-        // Process each row
-        for row in 0..ACTIVE_ROWS {
-            // For each bit position in PWM sequence (binary-coded modulation)
-            for bit_plane in 0..num_bit_planes {
-                // Calculate the bit mask for this bit position
-                // MSB (highest bit_plane) has the largest weight and should be displayed longest
-                let bit_position = num_bit_planes - 1 - bit_plane;
-
-                // Shift in the data for this row
+                // Shift in all the pixels for this row
                 for col in 0..DISPLAY_WIDTH {
-                    let pixel = self.framebuffer.buffer[row][col];
+                    let pixel = &self.framebuffer.buffer[row][col];
 
-                    // Apply gamma and brightness in-place
-                    let (r1, g1, b1, r2, g2, b2) =
-                        (pixel.r1, pixel.g1, pixel.b1, pixel.r2, pixel.g2, pixel.b2);
-                    // Apply brightness
+                    // Extract the bit for this bit plane
+                    // Use bit_plane directly as the shift amount (LSB to MSB)
+                    let shift = bit_plane;
 
+                    let r1_bit = (pixel.r1 >> shift) & 1;
+                    let g1_bit = (pixel.g1 >> shift) & 1;
+                    let b1_bit = (pixel.b1 >> shift) & 1;
 
-                    // Bit plane comparison
-                    let mask = 1 << (7 - bit_plane); // MSB first
-                    let r1_active = (r1 & mask) != 0;
-                    let g1_active = (g1 & mask) != 0;
-                    let b1_active = (b1 & mask) != 0;
+                    let r2_bit = (pixel.r2 >> shift) & 1;
+                    let g2_bit = (pixel.g2 >> shift) & 1;
+                    let b2_bit = (pixel.b2 >> shift) & 1;
 
-                    let r2_active = (r2 & mask) != 0;
-                    let g2_active = (g2 & mask) != 0;
-                    let b2_active = (b2 & mask) != 0;
+                    // Set the color pins based on the extracted bits
+                    self.pins
+                        .set_color_bits(r1_bit, g1_bit, b1_bit, r2_bit, g2_bit, b2_bit);
 
-                    // Set the color pins
-                    let dual_pixel = DualPixel {
-                        r1: u8::from(r1_active),
-                        g1: u8::from(g1_active),
-                        b1: u8::from(b1_active),
-                        r2: u8::from(r2_active),
-                        g2: u8::from(g2_active),
-                        b2: u8::from(b2_active),
-                    };
-                    self.pins.set_color_pins(&dual_pixel, 0);
-                    self.pins.clock_pulse();
+                    // Clock the data
+                    self.pins
+                        .clock_pulse_with_delay(delay, self.config.clock_delay_ns);
                 }
 
-                // Latch the data
-                self.pins.latch();
+                // Latch the row data
+                self.pins.latch_with_delay(delay);
 
-                // Set row address
+                // Set the row address
                 self.pins.set_row(row);
 
                 // Enable output
                 self.pins.set_output_enabled(true);
 
-                // Hold proportionally to the bit weight (binary coded modulation)
-                // MSB (bit_position = pwm_bits-1) should be displayed longest
-                let hold_time = (1 << bit_position) * self.config.row_step_time_us;
-                delay.delay_us(hold_time);
+                // Hold for a duration proportional to the bit weight
+                // For BCM, each bit plane is displayed for 2^bit_plane time units
+                let hold_time_us = 1u32 << bit_plane;
+                delay.delay_us(hold_time_us);
 
-                // Disable output before next bit plane
+                // Disable output before moving to next row
                 self.pins.set_output_enabled(false);
 
                 // Small delay to prevent ghosting
-                delay.delay_ns(1);
+                delay.delay_ns(100);
             }
         }
 
         // Mark framebuffer as updated
         self.framebuffer.reset_modified();
+
+        Ok(())
     }
 
     /// Set a pixel in the framebuffer
     pub fn set_pixel(&mut self, x: i32, y: i32, color: Rgb565) {
-        // Convert Rgb565 to 8-bit linear scale
-        let mut r = color.r() << 3; // 5-bit -> 8-bit
-        let mut g = color.g() << 2; // 6-bit -> 8-bit
-        let mut b = color.b() << 3;
-
-        let brightness = u16::from(self.config.brightness);
-        r = ((u16::from(r) * brightness) >> 8) as u8;
-        g = ((u16::from(g) * brightness) >> 8) as u8;
-        b = ((u16::from(b) * brightness) >> 8) as u8;
-
-        if self.config.use_gamma_correction {
-            r = GAMMA8[r as usize];
-            g = GAMMA8[g as usize];
-            b = GAMMA8[b as usize];
+        if x < 0 || y < 0 || x >= DISPLAY_WIDTH as i32 || y >= DISPLAY_HEIGHT as i32 {
+            return;
         }
 
-        // Swap the colors to match the hardware configuration
-        // Based on your description: blue→green, green→red, red→blue
-        let r_final = b; // Red pin receives what should be blue
-        let g_final = r; // Green pin receives what should be red
-        let b_final = g; // Blue pin receives what should be green
+        let r = self.r_lut[color.r() as usize]; // 5-bit → 8-bit index
+        let g = self.g_lut[color.g() as usize]; // 6-bit → 8-bit index
+        let b = self.b_lut[color.b() as usize]; // 5-bit → 8-bit index
 
-        self.framebuffer.set_pixel(x as usize, y as usize, r_final, g_final, b_final);
+        // Apply hardware color mapping based on feature flags
+        #[cfg(feature = "mapping-brg")]
+        let (r_final, g_final, b_final) = (b, r, g); // Blue→Red, Red→Green, Green→Blue
+
+        #[cfg(feature = "mapping-gbr")]
+        let (r_final, g_final, b_final) = (g, b, r); // Green→Red, Blue→Green, Red→Blue
+
+        #[cfg(feature = "mapping-bgr")]
+        let (r_final, g_final, b_final) = (b, g, r); // Blue→Red, Green→Green, Red→Blue
+
+        #[cfg(feature = "mapping-rbg")]
+        let (r_final, g_final, b_final) = (r, b, g); // Red→Red, Blue→Green, Green→Blue
+
+        #[cfg(feature = "mapping-grb")]
+        let (r_final, g_final, b_final) = (g, r, b); // Green→Red, Red→Green, Blue→Blue
+
+        // Default to standard RGB mapping if no feature is selected
+        #[cfg(not(any(
+            feature = "mapping-brg",
+            feature = "mapping-gbr",
+            feature = "mapping-bgr",
+            feature = "mapping-rbg",
+            feature = "mapping-grb"
+        )))]
+        let (r_final, g_final, b_final) = (r, g, b);
+
+        self.framebuffer
+            .set_pixel(x as usize, y as usize, r_final, g_final, b_final);
     }
 
     /// Clear the framebuffer
@@ -263,7 +358,6 @@ impl Hub75 {
 
     /// Draw a test pattern to verify correct row mapping and scanning
     pub fn draw_test_pattern(&mut self) {
-        // Clear the framebuffer first
         self.clear();
 
         // Draw horizontal color bands
@@ -276,7 +370,7 @@ impl Hub75 {
                 4 => Rgb565::MAGENTA,
                 5 => Rgb565::YELLOW,
                 6 => Rgb565::WHITE,
-                _ => Rgb565::new(255 >> 3, 128 >> 2, 0), // Orange
+                _ => Rgb565::new(31, 32, 0), // Orange
             };
 
             for x in 0..DISPLAY_WIDTH {
@@ -284,58 +378,76 @@ impl Hub75 {
             }
         }
 
-        // Add a diagonal line for visual confirmation
-        for i in 0..DISPLAY_HEIGHT {
+        // Add diagonal lines
+        for i in 0..DISPLAY_HEIGHT.min(DISPLAY_WIDTH) {
             self.set_pixel(i as i32, i as i32, Rgb565::WHITE);
-            // Draw a thicker line for better visibility
-            if i > 0 {
-                self.set_pixel(i as i32 - 1, i as i32, Rgb565::WHITE);
-            }
-            if i < DISPLAY_WIDTH - 1 {
-                self.set_pixel(i as i32 + 1, i as i32, Rgb565::WHITE);
-            }
-        }
-
-        // Draw a grid pattern
-        for i in 0..DISPLAY_HEIGHT {
-            if i % 8 == 0 {
-                for x in 0..DISPLAY_WIDTH {
-                    self.set_pixel(x as i32, i as i32, Rgb565::BLACK);
-                }
-            }
-        }
-
-        for i in 0..DISPLAY_WIDTH {
-            if i % 8 == 0 {
-                for y in 0..DISPLAY_HEIGHT {
-                    self.set_pixel(i as i32, y as i32, Rgb565::BLACK);
-                }
-            }
+            self.set_pixel((DISPLAY_WIDTH - 1 - i) as i32, i as i32, Rgb565::WHITE);
         }
     }
 
-    // Draw a test gradient
+    /// Draw a test gradient
+    ///
+    /// Creates an RGB gradient that will appear differently based on
+    /// the color mapping feature selected at compile time:
+    ///
+    /// - Standard RGB: Red increases left→right, Green top→bottom
+    /// - BRG mapping: Actual display shows different colors due to hardware remapping
     pub fn draw_test_gradient(&mut self) {
         self.clear();
 
         for y in 0..DISPLAY_HEIGHT {
             for x in 0..DISPLAY_WIDTH {
-                self.set_pixel(
-                    x as i32,
-                    y as i32,
-                    Rgb565::new(
-                        (x * 32 / DISPLAY_WIDTH) as u8,
-                        32,
-                        (y * 32 / DISPLAY_HEIGHT) as u8,
-                    ),
-                );
+                let r = (x * 31 / (DISPLAY_WIDTH - 1)) as u8;
+                let g = (y * 63 / (DISPLAY_HEIGHT - 1)) as u8;
+                let b = ((x + y) * 31 / (DISPLAY_WIDTH + DISPLAY_HEIGHT - 2)) as u8;
+
+                self.set_pixel(x as i32, y as i32, Rgb565::new(r, g, b));
+            }
+        }
+    }
+
+    /// Draw a color channel test to verify hardware mapping
+    ///
+    /// This displays three vertical bands showing pure color channels:
+    /// - Left third: Should appear RED (if mapping is correct)
+    /// - Middle third: Should appear GREEN (if mapping is correct)
+    /// - Right third: Should appear BLUE (if mapping is correct)
+    ///
+    /// If the colors don't match expectations, try a different mapping feature:
+    /// - If you see BGR instead of RGB, use `mapping-bgr`
+    /// - If you see BRG instead of RGB, use `mapping-brg`
+    /// - If you see GBR instead of RGB, use `mapping-gbr`
+    /// - If you see GRB instead of RGB, use `mapping-grb`
+    /// - If you see RBG instead of RGB, use `mapping-rbg`
+    pub fn draw_channel_test(&mut self) {
+        self.clear();
+
+        // Divide screen into 3 vertical sections
+        let section_width = DISPLAY_WIDTH / 3;
+
+        for y in 0..DISPLAY_HEIGHT {
+            for x in 0..DISPLAY_WIDTH {
+                let intensity = (y * 63 / (DISPLAY_HEIGHT - 1)) as u8;
+
+                let color = if x < section_width {
+                    // Left third: Pure red gradient
+                    Rgb565::new(intensity >> 1, 0, 0)
+                } else if x < section_width * 2 {
+                    // Middle third: Pure green gradient
+                    Rgb565::new(0, intensity, 0)
+                } else {
+                    // Right third: Pure blue gradient
+                    Rgb565::new(0, 0, intensity >> 1)
+                };
+
+                self.set_pixel(x as i32, y as i32, color);
             }
         }
     }
 }
 
 // Implement embedded-graphics interfaces
-impl OriginDimensions for Hub75  {
+impl OriginDimensions for Hub75 {
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }

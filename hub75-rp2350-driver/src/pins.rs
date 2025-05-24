@@ -1,4 +1,5 @@
 use embassy_rp::gpio::Output;
+use embedded_hal::delay::DelayNs;
 
 pub type R1 = Output<'static>;
 pub type G1 = Output<'static>;
@@ -84,30 +85,37 @@ impl Hub75Pins {
             oe,
         }
     }
+
     /// Set the row address pins based on the row number
+    #[inline]
     pub fn set_row(&mut self, row: usize) {
-        // For 64x64 dual-scan panels:
+        // For 64x64 dual-scan panels, we have 32 addressable rows (0-31)
+        // requiring 5 address lines (A-E)
 
         if row & 0x01 != 0 {
             self.a.set_high();
         } else {
             self.a.set_low();
         }
+
         if row & 0x02 != 0 {
             self.b.set_high();
         } else {
             self.b.set_low();
         }
+
         if row & 0x04 != 0 {
             self.c.set_high();
         } else {
             self.c.set_low();
         }
+
         if row & 0x08 != 0 {
             self.d.set_high();
         } else {
             self.d.set_low();
         }
+
         if row & 0x10 != 0 {
             self.e.set_high();
         } else {
@@ -115,56 +123,53 @@ impl Hub75Pins {
         }
     }
 
-    /// Set the color pins for both the top and bottom halves
-    pub fn set_color_pins(&mut self, pixel: &DualPixel, threshold: u8) {
-        // Set the RGB pins for both halves based on the comparison with the threshold
-        if pixel.r1 > threshold {
-            self.r1.set_high();
+    #[inline]
+    fn set_pin_from_bit(pin: &mut Output<'static>, bit: u8) {
+        if bit != 0 {
+            pin.set_high();
         } else {
-            self.r1.set_low();
-        }
-        if pixel.g1 > threshold {
-            self.g1.set_high();
-        } else {
-            self.g1.set_low();
-        }
-        if pixel.b1 > threshold {
-            self.b1.set_high();
-        } else {
-            self.b1.set_low();
-        }
-
-        if pixel.r2 > threshold {
-            self.r2.set_high();
-        } else {
-            self.r2.set_low();
-        }
-        if pixel.g2 > threshold {
-            self.g2.set_high();
-        } else {
-            self.g2.set_low();
-        }
-        if pixel.b2 > threshold {
-            self.b2.set_high();
-        } else {
-            self.b2.set_low();
+            pin.set_low();
         }
     }
 
-    /// Generate a clock pulse
-    pub fn clock_pulse(&mut self) {
+    /// Set the color pins based on individual bit values
+    pub fn set_color_bits(&mut self, r1: u8, g1: u8, b1: u8, r2: u8, g2: u8, b2: u8) {
+        // Set pins for top half
+        Self::set_pin_from_bit(&mut self.r1, r1);
+        Self::set_pin_from_bit(&mut self.g1, g1);
+        Self::set_pin_from_bit(&mut self.b1, b1);
+
+        // Set pins for bottom half
+        Self::set_pin_from_bit(&mut self.r2, r2);
+        Self::set_pin_from_bit(&mut self.g2, g2);
+        Self::set_pin_from_bit(&mut self.b2, b2);
+    }
+
+    /// Generate a clock pulse with a configurable delay
+    pub fn clock_pulse_with_delay(&mut self, delay: &mut impl DelayNs, delay_ns: u32) {
         self.clk.set_high();
+        if delay_ns > 0 {
+            delay.delay_ns(delay_ns);
+        }
         self.clk.set_low();
+        if delay_ns > 0 {
+            delay.delay_ns(delay_ns);
+        }
     }
 
-    /// Latch the data into the display registers
-    pub fn latch(&mut self) {
+    /// Latch the data with a delay
+    #[inline]
+    pub fn latch_with_delay(&mut self, delay: &mut impl DelayNs) {
         self.lat.set_high();
+        delay.delay_ns(100); // 100ns latch pulse
         self.lat.set_low();
+        delay.delay_ns(100); // Hold time after latch
     }
 
     /// Enable or disable display output
+    #[inline]
     pub fn set_output_enabled(&mut self, enabled: bool) {
+        // OE is active low - low enables output, high disables
         if enabled {
             self.oe.set_low();
         } else {

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 hub75-rp2350-driver = { workspace = true }
+embedded-graphics = { workspace = true }
 common = { path = "../common" }
 
 # Logging dependencies
@@ -17,7 +18,6 @@ cortex-m-rt = { workspace = true }
 embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa", "binary-info", "intrinsics"] }
 embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
-smart-leds = { workspace = true }
 static_cell = { workspace = true }
 
 [lib]
