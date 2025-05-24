@@ -510,9 +510,9 @@ dependencies = [
  "embassy-executor",
  "embassy-rp",
  "embassy-time",
+ "embedded-graphics",
  "hub75-rp2350-driver",
  "panic-probe",
- "smart-leds",
  "static_cell",
 ]
 

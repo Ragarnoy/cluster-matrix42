@@ -159,6 +159,9 @@ pub struct Hub75 {
     pins: Hub75Pins,
     pub config: Hub75Config,
     framebuffer: FrameBuffer,
+    r_lut: [u8; 32], // 5-bit input (Rgb565 red channel)
+    g_lut: [u8; 64], // 6-bit input (Rgb565 green channel)
+    b_lut: [u8; 32], // 5-bit input (Rgb565 blue channel)
 }
 
 impl Hub75 {
@@ -170,17 +173,91 @@ impl Hub75 {
     /// Create a new Hub75 driver with custom configuration
     pub fn new_with_config(pins: Hub75Pins, config: Hub75Config) -> Self {
         let framebuffer = FrameBuffer::new();
-
-        Self {
+        let mut driver = Self {
             pins,
             config,
             framebuffer,
-        }
+            r_lut: [0; 32],
+            g_lut: [0; 64],
+            b_lut: [0; 32],
+        };
+        driver.update_luts(); // Initialize LUTs
+        driver
     }
 
     /// Update the configuration
     pub fn set_config(&mut self, config: Hub75Config) {
         self.config = config;
+        self.update_luts(); // Rebuild LUTs on config change
+    }
+
+    fn update_luts(&mut self) {
+        let brightness = self.config.brightness as u16;
+        let shift = 8 - self.config.pwm_bits;
+        let use_gamma = self.config.use_gamma_correction;
+
+        // Precompute red LUT (5-bit input)
+        for i in 0..32 {
+            // Original conversion from Rgb565 to 8-bit
+            let mut val = (i as u16 * 255) / 31;
+
+            // Apply brightness
+            if brightness < 255 {
+                val = (val * brightness) / 255;
+            }
+
+            // Apply gamma correction
+            let val_8bit = if use_gamma {
+                GAMMA8[val as usize]
+            } else {
+                val as u8
+            };
+
+            // Scale to PWM bit depth
+            self.r_lut[i as usize] = val_8bit >> shift;
+        }
+
+        // Precompute green LUT (6-bit input)
+        for i in 0..64 {
+            // Original conversion from Rgb565 to 8-bit
+            let mut val = (i as u16 * 255) / 63;
+
+            // Apply brightness
+            if brightness < 255 {
+                val = (val * brightness) / 255;
+            }
+
+            // Apply gamma correction
+            let val_8bit = if use_gamma {
+                GAMMA8[val as usize]
+            } else {
+                val as u8
+            };
+
+            // Scale to PWM bit depth
+            self.g_lut[i as usize] = val_8bit >> shift;
+        }
+
+        // Precompute blue LUT (5-bit input)
+        for i in 0..32 {
+            // Original conversion from Rgb565 to 8-bit
+            let mut val = (i as u16 * 255) / 31;
+
+            // Apply brightness
+            if brightness < 255 {
+                val = (val * brightness) / 255;
+            }
+
+            // Apply gamma correction
+            let val_8bit = if use_gamma {
+                GAMMA8[val as usize]
+            } else {
+                val as u8
+            };
+
+            // Scale to PWM bit depth
+            self.b_lut[i as usize] = val_8bit >> shift;
+        }
     }
 
     /// Update the display with the current framebuffer contents
@@ -256,31 +333,9 @@ impl Hub75 {
             return;
         }
 
-        // Convert Rgb565 to 8-bit values
-        let mut r = (color.r() as u16 * 255 / 31) as u8;
-        let mut g = (color.g() as u16 * 255 / 63) as u8;
-        let mut b = (color.b() as u16 * 255 / 31) as u8;
-
-        // Apply brightness scaling
-        if self.config.brightness < 255 {
-            let brightness = self.config.brightness as u16;
-            r = ((r as u16 * brightness) / 255) as u8;
-            g = ((g as u16 * brightness) / 255) as u8;
-            b = ((b as u16 * brightness) / 255) as u8;
-        }
-
-        // Apply gamma correction if enabled
-        if self.config.use_gamma_correction {
-            r = GAMMA8[r as usize];
-            g = GAMMA8[g as usize];
-            b = GAMMA8[b as usize];
-        }
-
-        // Scale down to PWM bit depth
-        let shift = 8 - self.config.pwm_bits;
-        r >>= shift;
-        g >>= shift;
-        b >>= shift;
+        let r = self.r_lut[color.r() as usize]; // 5-bit → 8-bit index
+        let g = self.g_lut[color.g() as usize]; // 6-bit → 8-bit index
+        let b = self.b_lut[color.b() as usize]; // 5-bit → 8-bit index
 
         // Apply hardware color mapping based on feature flags
         #[cfg(feature = "mapping-brg")]

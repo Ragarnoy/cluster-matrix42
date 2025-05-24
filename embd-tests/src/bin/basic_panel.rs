@@ -11,11 +11,14 @@
 #![no_main]
 
 use common::animations::{fortytwo, stars};
+use defmt::export::display;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
 use embassy_rp::gpio;
 use embassy_rp::multicore::{Stack, spawn_core1};
 use embassy_time::{Delay, Duration, Timer};
+use embedded_graphics::pixelcolor::Rgb565;
+use embedded_graphics::prelude::{RgbColor, WebColors};
 use hub75_rp2350_driver::pins;
 use hub75_rp2350_driver::{Hub75, Hub75Config, pins::Hub75Pins};
 use static_cell::StaticCell;
@@ -123,8 +126,8 @@ async fn matrix_task(
         // stars::draw_animation_frame(&mut display, frame_counter).unwrap();
         // fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_gradient();
-        display.draw_channel_test();
-        // display.draw_test_pattern();
+        // display.draw_channel_test();
+        display.draw_test_pattern();
 
         // Update the display
         if let Err(e) = display.update(&mut delay) {
