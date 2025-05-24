@@ -124,24 +124,8 @@ impl SharedClusterState {
 }
 
 /// Global shared state for all clusters
-pub static SHARED_CLUSTERS: [SharedClusterState; MAX_CLUSTERS] = [
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-    SharedClusterState::new(),
-];
+pub static SHARED_CLUSTERS: [SharedClusterState; MAX_CLUSTERS] =
+    [const { SharedClusterState::new() }; MAX_CLUSTERS];
 
 /// Currently selected cluster for display
 pub static CURRENT_CLUSTER_INDEX: AtomicU8 = AtomicU8::new(0);
