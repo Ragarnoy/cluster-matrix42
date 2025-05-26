@@ -6,8 +6,10 @@
 #![no_main]
 
 use common::animations;
-use defmt::info;
+use defmt::{info, trace};
 use embassy_executor::{Executor, Spawner};
+use embassy_rp::clocks::{ClockConfig, CoreVoltage};
+use embassy_rp::config::Config;
 use embassy_rp::gpio;
 use embassy_rp::multicore::{Stack, spawn_core1};
 use embassy_time::{Delay, Duration, Timer};
@@ -112,18 +114,34 @@ async fn matrix_task(
         fps = if micros > 0 { 1_000_000 / micros } else { 0 };
         last_time = current_time;
 
-        info!("Current FPS: {}", fps);
+        if frame_counter % 60 == 0 {
+            info!("Current FPS: {}", fps);
+        }
 
+        // Measure animation frame drawing time
+        let anim_start = embassy_time::Instant::now();
         // Draw the current animation frame
         // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
         animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_gradient();
         // display.draw_channel_test();
         // display.draw_test_pattern();
+        let anim_time = anim_start.elapsed();
 
+        // Measure display update time
+        let update_start = embassy_time::Instant::now();
         // Update the display
-        if let Err(e) = display.update(&mut delay) {
-            defmt::error!("Display update failed: {:?}", e);
+        unsafe {
+            display.update(&mut delay).unwrap_unchecked();
+        }
+        let update_time = update_start.elapsed();
+
+        if frame_counter % 60 == 0 {
+            info!(
+                "Animation time: {}us, Update time: {}us",
+                anim_time.as_micros(),
+                update_time.as_micros()
+            );
         }
 
         // Increment frame counter
