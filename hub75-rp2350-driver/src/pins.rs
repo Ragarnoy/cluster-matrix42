@@ -161,9 +161,9 @@ impl Hub75Pins {
     #[inline]
     pub fn latch_with_delay(&mut self, delay: &mut impl DelayNs) {
         self.lat.set_high();
-        delay.delay_ns(100); // 100ns latch pulse
+        delay.delay_ns(25); // 25ns latch pulse
         self.lat.set_low();
-        delay.delay_ns(100); // Hold time after latch
+        delay.delay_ns(25); // Hold time after latch
     }
 
     /// Enable or disable display output

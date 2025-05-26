@@ -118,7 +118,7 @@ impl Default for Hub75Config {
             pwm_bits: 6,                // 6-bit PWM
             brightness: 255,            // Full brightness
             use_gamma_correction: true, // Enable gamma correction for better visuals
-            clock_delay_ns: 100,        // 100ns clock delay
+            clock_delay_ns: 25,         // 25ns clock delay
         }
     }
 }
@@ -292,16 +292,16 @@ impl Hub75 {
                 // Enable output
                 self.pins.set_output_enabled(true);
 
-                // Hold for a duration proportional to the bit weight
                 // For BCM, each bit plane is displayed for 2^bit_plane time units
-                let hold_time_us = 1u32 << bit_plane;
+                const BCM_TIMINGS: [u32; 6] = [1, 2, 4, 7, 14, 35];
+                let hold_time_us = BCM_TIMINGS[bit_plane as usize];
                 delay.delay_us(hold_time_us);
 
                 // Disable output before moving to next row
                 self.pins.set_output_enabled(false);
 
                 // Small delay to prevent ghosting
-                delay.delay_ns(100);
+                delay.delay_ns(25);
             }
         }
 
