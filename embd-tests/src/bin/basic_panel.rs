@@ -1,20 +1,16 @@
-//! Multicore Hub75 LED Matrix Demo for 64x64 display with Embassy
-//! Core 0: Controls Hub75 LED matrix
-//! Core 1: Handles led blinking
+//! Updated example showing how to use the new PIO-based Hub75 driver
 
 #![no_std]
 #![no_main]
 
 use common::animations;
-use defmt::{info, trace};
+use defmt::info;
 use embassy_executor::{Executor, Spawner};
-use embassy_rp::clocks::{ClockConfig, CoreVoltage};
-use embassy_rp::config::Config;
-use embassy_rp::gpio;
 use embassy_rp::multicore::{Stack, spawn_core1};
+use embassy_rp::peripherals::*;
+use embassy_rp::{Peri, gpio};
 use embassy_time::{Delay, Duration, Timer};
-use hub75_rp2350_driver::pins;
-use hub75_rp2350_driver::{Hub75, Hub75Config, pins::Hub75Pins};
+use hub75_rp2350_driver::{Hub75, Hub75Config};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -22,33 +18,21 @@ use {defmt_rtt as _, panic_probe as _};
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
-/// Input value 0 to 255 to get a color value
-/// The colors are a transition r - g - b - back to r.
-
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
 
     // Configure GPIO pins for Hub75 LED matrix
-    let r1 = gpio::Output::new(p.PIN_0, gpio::Level::Low);
-    let g1 = gpio::Output::new(p.PIN_1, gpio::Level::Low);
-    let b1 = gpio::Output::new(p.PIN_2, gpio::Level::Low);
-    let r2 = gpio::Output::new(p.PIN_3, gpio::Level::Low);
-    let g2 = gpio::Output::new(p.PIN_4, gpio::Level::Low);
-    let b2 = gpio::Output::new(p.PIN_5, gpio::Level::Low);
+    // Control pins are configured as regular GPIO outputs
+    let lat_pin = gpio::Output::new(p.PIN_7, gpio::Level::Low);
+    let oe_pin = gpio::Output::new(p.PIN_8, gpio::Level::High); // OE is active low, start disabled
 
-    let a = gpio::Output::new(p.PIN_6, gpio::Level::Low);
-    let b = gpio::Output::new(p.PIN_7, gpio::Level::Low);
-    let c = gpio::Output::new(p.PIN_8, gpio::Level::Low);
-    let d = gpio::Output::new(p.PIN_9, gpio::Level::Low);
-    let e = gpio::Output::new(p.PIN_10, gpio::Level::Low);
-
-    let clk = gpio::Output::new(p.PIN_11, gpio::Level::Low);
-    let lat = gpio::Output::new(p.PIN_12, gpio::Level::Low);
-    let oe = gpio::Output::new(p.PIN_13, gpio::Level::High); // OE is active low, start disabled
-
-    // Create pin tuple for our Hub75 driver
-    let pins = (r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe);
+    // Address pins
+    let a_pin = gpio::Output::new(p.PIN_9, gpio::Level::Low);
+    let b_pin = gpio::Output::new(p.PIN_10, gpio::Level::Low);
+    let c_pin = gpio::Output::new(p.PIN_11, gpio::Level::Low);
+    let d_pin = gpio::Output::new(p.PIN_12, gpio::Level::Low);
+    let e_pin = gpio::Output::new(p.PIN_13, gpio::Level::Low);
 
     // Spawn Core 1 to handle led blinking
     let led = gpio::Output::new(p.PIN_25, gpio::Level::Low);
@@ -63,43 +47,50 @@ async fn main(spawner: Spawner) {
         },
     );
 
-    // Core 0 handles Hub75 matrix
-    spawner.spawn(matrix_task(pins)).unwrap();
+    // Core 0 handles Hub75 matrix with PIO + DMA
+    spawner
+        .spawn(matrix_task(
+            p.PIO0, p.DMA_CH0, p.PIN_0, // r1_pin
+            p.PIN_1, // g1_pin
+            p.PIN_2, // b1_pin
+            p.PIN_3, // r2_pin
+            p.PIN_4, // g2_pin
+            p.PIN_5, // b2_pin
+            p.PIN_6, // clk_pin
+            lat_pin, oe_pin, a_pin, b_pin, c_pin, d_pin, e_pin,
+        ))
+        .unwrap();
 }
 
 #[embassy_executor::task]
 async fn matrix_task(
-    pins: (
-        pins::R1,
-        pins::G1,
-        pins::B1,
-        pins::R2,
-        pins::G2,
-        pins::B2,
-        pins::A,
-        pins::B,
-        pins::C,
-        pins::D,
-        pins::E,
-        pins::CLK,
-        pins::LAT,
-        pins::OE,
-    ),
+    pio: Peri<'static, PIO0>,
+    dma_chan: Peri<'static, DMA_CH0>,
+    r1_pin: Peri<'static, PIN_0>,
+    g1_pin: Peri<'static, PIN_1>,
+    b1_pin: Peri<'static, PIN_2>,
+    r2_pin: Peri<'static, PIN_3>,
+    g2_pin: Peri<'static, PIN_4>,
+    b2_pin: Peri<'static, PIN_5>,
+    clk_pin: Peri<'static, PIN_6>,
+    lat_pin: gpio::Output<'static>,
+    oe_pin: gpio::Output<'static>,
+    a_pin: gpio::Output<'static>,
+    b_pin: gpio::Output<'static>,
+    c_pin: gpio::Output<'static>,
+    d_pin: gpio::Output<'static>,
+    e_pin: gpio::Output<'static>,
 ) {
-    // Use Embassy's built-in Delay implementation
     let mut delay = Delay;
 
-    info!("Starting Hub75 LED matrix control");
+    info!("Starting Hub75 LED matrix control with PIO + DMA");
 
-    let (r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe) = pins;
-
-    // Create pins struct with static dispatch
-    let pins = Hub75Pins::new(r1, g1, b1, r2, g2, b2, a, b, c, d, e, clk, lat, oe);
-
-    // Create the LED matrix driver
+    // Create the LED matrix driver with PIO + DMA
     let config = Hub75Config::default();
-
-    let mut display = Hub75::new_with_config(pins, config);
+    let mut display = Hub75::new(
+        pio, dma_chan, config, r1_pin, g1_pin, b1_pin, r2_pin, g2_pin, b2_pin, clk_pin, lat_pin,
+        oe_pin, a_pin, b_pin, c_pin, d_pin, e_pin,
+    );
 
     // Animation frame counter and time tracking
     let mut frame_counter: u32 = 0;
@@ -121,8 +112,8 @@ async fn matrix_task(
         // Measure animation frame drawing time
         let anim_start = embassy_time::Instant::now();
         // Draw the current animation frame
-        // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
-        animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
+        animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_gradient();
         // display.draw_channel_test();
         // display.draw_test_pattern();
@@ -132,7 +123,7 @@ async fn matrix_task(
         let update_start = embassy_time::Instant::now();
         // Update the display
         unsafe {
-            display.update(&mut delay).unwrap_unchecked();
+            display.update(&mut delay).await.unwrap_unchecked();
         }
         let update_time = update_start.elapsed();
 
