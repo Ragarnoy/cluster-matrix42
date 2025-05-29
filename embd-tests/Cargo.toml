@@ -18,6 +18,7 @@ embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-th
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
 embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
 static_cell = { workspace = true }
+log = "0.4.27"
 
 [lib]
 test = false

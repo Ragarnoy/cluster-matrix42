@@ -510,6 +510,7 @@ dependencies = [
  "embassy-rp",
  "embassy-time",
  "hub75-rp2350-driver",
+ "log",
  "panic-probe",
  "static_cell",
 ]

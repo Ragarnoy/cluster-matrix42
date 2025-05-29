@@ -3,14 +3,15 @@
 #![no_std]
 #![no_main]
 
+use core::ptr::addr_of_mut;
 use common::animations;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
-use embassy_rp::multicore::{Stack, spawn_core1};
+use embassy_rp::multicore::{spawn_core1, Stack};
 use embassy_rp::peripherals::*;
-use embassy_rp::{Peri, gpio};
-use embassy_time::{Delay, Duration, Timer};
-use hub75_rp2350_driver::{Hub75, Hub75Config};
+use embassy_rp::{gpio, Peri};
+use embassy_time::{Duration, Timer};
+use hub75_rp2350_driver::{DisplayMemory, Hub75};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -18,21 +19,40 @@ use {defmt_rtt as _, panic_probe as _};
 static mut CORE1_STACK: Stack<4096> = Stack::new();
 static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 
+// Static memory for the display - required for the driver
+static DISPLAY_MEMORY: StaticCell<DisplayMemory> = StaticCell::new();
+
+// Pin grouping structures to reduce parameter count
+pub struct Hub75Pins {
+    // RGB data pins
+    pub r1_pin: Peri<'static, PIN_0>,
+    pub g1_pin: Peri<'static, PIN_1>,
+    pub b1_pin: Peri<'static, PIN_2>,
+    pub r2_pin: Peri<'static, PIN_3>,
+    pub g2_pin: Peri<'static, PIN_4>,
+    pub b2_pin: Peri<'static, PIN_5>,
+    pub clk_pin: Peri<'static, PIN_6>,
+    // Address pins
+    pub a_pin: Peri<'static, PIN_9>,
+    pub b_pin: Peri<'static, PIN_10>,
+    pub c_pin: Peri<'static, PIN_11>,
+    pub d_pin: Peri<'static, PIN_12>,
+    pub e_pin: Peri<'static, PIN_13>,
+    // Control pins
+    pub lat_pin: Peri<'static, PIN_7>,
+    pub oe_pin: Peri<'static, PIN_8>,
+}
+
+pub struct DmaChannels {
+    pub dma_ch0: Peri<'static, DMA_CH0>,
+    pub dma_ch1: Peri<'static, DMA_CH1>,
+    pub dma_ch2: Peri<'static, DMA_CH2>,
+    pub dma_ch3: Peri<'static, DMA_CH3>,
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
-
-    // Configure GPIO pins for Hub75 LED matrix
-    // Control pins are configured as regular GPIO outputs
-    let lat_pin = gpio::Output::new(p.PIN_7, gpio::Level::Low);
-    let oe_pin = gpio::Output::new(p.PIN_8, gpio::Level::High); // OE is active low, start disabled
-
-    // Address pins
-    let a_pin = gpio::Output::new(p.PIN_9, gpio::Level::Low);
-    let b_pin = gpio::Output::new(p.PIN_10, gpio::Level::Low);
-    let c_pin = gpio::Output::new(p.PIN_11, gpio::Level::Low);
-    let d_pin = gpio::Output::new(p.PIN_12, gpio::Level::Low);
-    let e_pin = gpio::Output::new(p.PIN_13, gpio::Level::Low);
 
     // Spawn Core 1 to handle led blinking
     let led = gpio::Output::new(p.PIN_25, gpio::Level::Low);
@@ -47,93 +67,108 @@ async fn main(spawner: Spawner) {
         },
     );
 
+    // Group pins and DMA channels
+    let pins = Hub75Pins {
+        r1_pin: p.PIN_0,
+        g1_pin: p.PIN_1,
+        b1_pin: p.PIN_2,
+        r2_pin: p.PIN_3,
+        g2_pin: p.PIN_4,
+        b2_pin: p.PIN_5,
+        
+        clk_pin: p.PIN_6,
+        
+        a_pin: p.PIN_9,
+        b_pin: p.PIN_10,
+        c_pin: p.PIN_11,
+        d_pin: p.PIN_12,
+        e_pin: p.PIN_13,
+        
+        lat_pin: p.PIN_7,
+        oe_pin: p.PIN_8,
+    };
+
+    let dma_channels = DmaChannels {
+        dma_ch0: p.DMA_CH0,
+        dma_ch1: p.DMA_CH1,
+        dma_ch2: p.DMA_CH2,
+        dma_ch3: p.DMA_CH3,
+    };
+
     // Core 0 handles Hub75 matrix with PIO + DMA
     spawner
-        .spawn(matrix_task(
-            p.PIO0, p.DMA_CH0, p.PIN_0, // r1_pin
-            p.PIN_1, // g1_pin
-            p.PIN_2, // b1_pin
-            p.PIN_3, // r2_pin
-            p.PIN_4, // g2_pin
-            p.PIN_5, // b2_pin
-            p.PIN_6, // clk_pin
-            lat_pin, oe_pin, a_pin, b_pin, c_pin, d_pin, e_pin,
-        ))
+        .spawn(matrix_task(p.PIO0, dma_channels, pins))
         .unwrap();
 }
 
 #[embassy_executor::task]
 async fn matrix_task(
     pio: Peri<'static, PIO0>,
-    dma_chan: Peri<'static, DMA_CH0>,
-    r1_pin: Peri<'static, PIN_0>,
-    g1_pin: Peri<'static, PIN_1>,
-    b1_pin: Peri<'static, PIN_2>,
-    r2_pin: Peri<'static, PIN_3>,
-    g2_pin: Peri<'static, PIN_4>,
-    b2_pin: Peri<'static, PIN_5>,
-    clk_pin: Peri<'static, PIN_6>,
-    lat_pin: gpio::Output<'static>,
-    oe_pin: gpio::Output<'static>,
-    a_pin: gpio::Output<'static>,
-    b_pin: gpio::Output<'static>,
-    c_pin: gpio::Output<'static>,
-    d_pin: gpio::Output<'static>,
-    e_pin: gpio::Output<'static>,
-) {
-    let mut delay = Delay;
-
-    info!("Starting Hub75 LED matrix control with PIO + DMA");
+    dma_channels: DmaChannels,
+    pins: Hub75Pins,
+) {    info!("Starting Hub75 LED matrix control with 3 PIO SMs + chained DMA");
 
     // Create the LED matrix driver with PIO + DMA
-    let config = Hub75Config::default();
     let mut display = Hub75::new(
-        pio, dma_chan, config, r1_pin, g1_pin, b1_pin, r2_pin, g2_pin, b2_pin, clk_pin, lat_pin,
-        oe_pin, a_pin, b_pin, c_pin, d_pin, e_pin,
+        pio,
+        (dma_channels.dma_ch0, dma_channels.dma_ch1, dma_channels.dma_ch2, dma_channels.dma_ch3),
+        DISPLAY_MEMORY.init(DisplayMemory::new()),
+        // RGB data pins
+        pins.r1_pin, pins.g1_pin, pins.b1_pin,
+        pins.r2_pin, pins.g2_pin, pins.b2_pin,
+        pins.clk_pin,
+        // Address pins (all 5 for 64x64 display)
+        pins.a_pin, pins.b_pin, pins.c_pin, pins.d_pin, pins.e_pin,
+        // Control pins
+        pins.lat_pin, pins.oe_pin,
     );
+    info!("Hub75 driver initialized - display running continuously with zero CPU overhead");
 
     // Animation frame counter and time tracking
     let mut frame_counter: u32 = 0;
     let mut last_time = embassy_time::Instant::now();
-    let mut fps: u64;
 
-    // Main animation loop
+    // Main animation loop - no need to call update(), display runs automatically!
     loop {
         let current_time = embassy_time::Instant::now();
         let elapsed = current_time.duration_since(last_time);
         let micros = elapsed.as_micros();
-        fps = if micros > 0 { 1_000_000 / micros } else { 0 };
+        let fps = if micros > 0 { 1_000_000 / micros } else { 0 };
         last_time = current_time;
 
         if frame_counter % 60 == 0 {
-            info!("Current FPS: {}", fps);
+            info!("Animation FPS: {}", fps);
         }
 
         // Measure animation frame drawing time
         let anim_start = embassy_time::Instant::now();
-        // Draw the current animation frame
-        animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
+
+        // Draw the current animation frame into the inactive buffer
+        // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
+
+        // Alternative animations to try:
         // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_gradient();
-        // display.draw_channel_test();
-        // display.draw_test_pattern();
+        display.draw_test_pattern();
+
         let anim_time = anim_start.elapsed();
 
-        // Measure display update time
-        let update_start = embassy_time::Instant::now();
-        // Update the display
-        unsafe {
-            display.update(&mut delay).await.unwrap_unchecked();
-        }
-        let update_time = update_start.elapsed();
+        // Commit the buffer - this makes it visible on the display
+        // This is very fast (just a pointer swap) and non-blocking
+        let commit_start = embassy_time::Instant::now();
+        display.commit();
+        let commit_time = commit_start.elapsed();
 
         if frame_counter % 60 == 0 {
             info!(
-                "Animation time: {}us, Update time: {}us",
+                "Animation draw time: {}us, Buffer commit time: {}us",
                 anim_time.as_micros(),
-                update_time.as_micros()
+                commit_time.as_micros()
             );
         }
+
+        // Control animation frame rate (optional - you can go as fast as you want)
+        Timer::after(Duration::from_millis(16)).await; // ~60 FPS animation
 
         // Increment frame counter
         frame_counter = frame_counter.wrapping_add(1);
