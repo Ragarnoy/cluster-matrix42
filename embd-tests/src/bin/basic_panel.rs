@@ -3,13 +3,13 @@
 #![no_std]
 #![no_main]
 
-use core::ptr::addr_of_mut;
 use common::animations;
+use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
-use embassy_rp::multicore::{spawn_core1, Stack};
+use embassy_rp::multicore::{Stack, spawn_core1};
 use embassy_rp::peripherals::*;
-use embassy_rp::{gpio, Peri};
+use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
 use hub75_rp2350_driver::{DisplayMemory, Hub75};
 use static_cell::StaticCell;
@@ -31,16 +31,16 @@ pub struct Hub75Pins {
     pub r2_pin: Peri<'static, PIN_3>,
     pub g2_pin: Peri<'static, PIN_4>,
     pub b2_pin: Peri<'static, PIN_5>,
-    pub clk_pin: Peri<'static, PIN_6>,
     // Address pins
-    pub a_pin: Peri<'static, PIN_9>,
-    pub b_pin: Peri<'static, PIN_10>,
-    pub c_pin: Peri<'static, PIN_11>,
-    pub d_pin: Peri<'static, PIN_12>,
-    pub e_pin: Peri<'static, PIN_13>,
+    pub a_pin: Peri<'static, PIN_6>,
+    pub b_pin: Peri<'static, PIN_7>,
+    pub c_pin: Peri<'static, PIN_8>,
+    pub d_pin: Peri<'static, PIN_9>,
+    pub e_pin: Peri<'static, PIN_10>,
     // Control pins
-    pub lat_pin: Peri<'static, PIN_7>,
-    pub oe_pin: Peri<'static, PIN_8>,
+    pub clk_pin: Peri<'static, PIN_11>,
+    pub lat_pin: Peri<'static, PIN_12>,
+    pub oe_pin: Peri<'static, PIN_13>,
 }
 
 pub struct DmaChannels {
@@ -58,7 +58,7 @@ async fn main(spawner: Spawner) {
     let led = gpio::Output::new(p.PIN_25, gpio::Level::Low);
     spawn_core1(
         p.CORE1,
-        unsafe { &mut *core::ptr::addr_of_mut!(CORE1_STACK) },
+        unsafe { &mut *addr_of_mut!(CORE1_STACK) },
         move || {
             let executor1 = EXECUTOR1.init(Executor::new());
             executor1.run(|spawner| {
@@ -75,17 +75,16 @@ async fn main(spawner: Spawner) {
         r2_pin: p.PIN_3,
         g2_pin: p.PIN_4,
         b2_pin: p.PIN_5,
-        
-        clk_pin: p.PIN_6,
-        
-        a_pin: p.PIN_9,
-        b_pin: p.PIN_10,
-        c_pin: p.PIN_11,
-        d_pin: p.PIN_12,
-        e_pin: p.PIN_13,
-        
-        lat_pin: p.PIN_7,
-        oe_pin: p.PIN_8,
+
+        a_pin: p.PIN_6,  // Changed from PIN_9
+        b_pin: p.PIN_7,  // Changed from PIN_10
+        c_pin: p.PIN_8,  // Changed from PIN_11
+        d_pin: p.PIN_9,  // Changed from PIN_12
+        e_pin: p.PIN_10, // Changed from PIN_13
+
+        clk_pin: p.PIN_11, // Changed from PIN_6
+        lat_pin: p.PIN_12, // Changed from PIN_7
+        oe_pin: p.PIN_13,  // Changed from PIN_8
     };
 
     let dma_channels = DmaChannels {
@@ -102,25 +101,36 @@ async fn main(spawner: Spawner) {
 }
 
 #[embassy_executor::task]
-async fn matrix_task(
-    pio: Peri<'static, PIO0>,
-    dma_channels: DmaChannels,
-    pins: Hub75Pins,
-) {    info!("Starting Hub75 LED matrix control with 3 PIO SMs + chained DMA");
+async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: Hub75Pins) {
+    info!("Starting Hub75 LED matrix control with 3 PIO SMs + chained DMA");
 
     // Create the LED matrix driver with PIO + DMA
     let mut display = Hub75::new(
         pio,
-        (dma_channels.dma_ch0, dma_channels.dma_ch1, dma_channels.dma_ch2, dma_channels.dma_ch3),
+        (
+            dma_channels.dma_ch0,
+            dma_channels.dma_ch1,
+            dma_channels.dma_ch2,
+            dma_channels.dma_ch3,
+        ),
         DISPLAY_MEMORY.init(DisplayMemory::new()),
         // RGB data pins
-        pins.r1_pin, pins.g1_pin, pins.b1_pin,
-        pins.r2_pin, pins.g2_pin, pins.b2_pin,
+        pins.r1_pin,
+        pins.g1_pin,
+        pins.b1_pin,
+        pins.r2_pin,
+        pins.g2_pin,
+        pins.b2_pin,
         pins.clk_pin,
         // Address pins (all 5 for 64x64 display)
-        pins.a_pin, pins.b_pin, pins.c_pin, pins.d_pin, pins.e_pin,
+        pins.a_pin,
+        pins.b_pin,
+        pins.c_pin,
+        pins.d_pin,
+        pins.e_pin,
         // Control pins
-        pins.lat_pin, pins.oe_pin,
+        pins.lat_pin,
+        pins.oe_pin,
     );
     info!("Hub75 driver initialized - display running continuously with zero CPU overhead");
 
@@ -169,6 +179,8 @@ async fn matrix_task(
 
         // Control animation frame rate (optional - you can go as fast as you want)
         Timer::after(Duration::from_millis(16)).await; // ~60 FPS animation
+        debug_dma_status();
+        debug_pio_state();
 
         // Increment frame counter
         frame_counter = frame_counter.wrapping_add(1);
@@ -184,5 +196,57 @@ async fn core1_task(mut led: gpio::Output<'static>) {
         Timer::after(Duration::from_secs(1)).await;
         led.set_low();
         Timer::after(Duration::from_secs(1)).await;
+    }
+}
+
+pub fn debug_dma_status() {
+    let dma = embassy_rp::pac::DMA;
+
+    for i in 0..4 {
+        let ctrl = dma.ch(i).ctrl_trig().read();
+        let trans_count = dma.ch(i).trans_count().read();
+        defmt::info!(
+            "DMA CH{}: enabled={}, busy={}, trans_count={}",
+            i,
+            ctrl.en(),
+            ctrl.busy(),
+            trans_count.0
+        );
+    }
+
+    // Check if PIOs are stalled
+    let pio0 = embassy_rp::pac::PIO0;
+    let fdebug = pio0.fdebug().read();
+    defmt::info!(
+        "PIO0 FDEBUG: txstall={:x}, txover={:x}",
+        fdebug.txstall(),
+        fdebug.txover()
+    );
+}
+
+fn debug_pio_state() {
+    unsafe {
+        let pio = embassy_rp::pac::PIO0;
+
+        // Check if state machines are enabled
+        let ctrl = pio.ctrl().read();
+        info!(
+            "PIO SM enabled: SM0={}, SM1={}, SM2={}",
+            ctrl.sm_enable() & 0x1 != 0,
+            ctrl.sm_enable() & 0x2 != 0,
+            ctrl.sm_enable() & 0x4 != 0
+        );
+
+        // Check FIFO levels
+        let fstat = pio.fstat().read();
+        info!(
+            "PIO FIFO levels: TX0={}, TX1={}, TX2={}",
+            4 - ((fstat.txempty() >> 0) & 1) - ((fstat.txfull() >> 0) & 1) * 4,
+            4 - ((fstat.txempty() >> 1) & 1) - ((fstat.txfull() >> 1) & 1) * 4,
+            4 - ((fstat.txempty() >> 2) & 1) - ((fstat.txfull() >> 2) & 1) * 4
+        );
+
+        // Check if SMs are stalled
+        info!("PIO stall status: {:#010b}", pio.fdebug().read().txstall());
     }
 }
