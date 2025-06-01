@@ -9,6 +9,7 @@
 #![no_std]
 
 use core::convert::Infallible;
+use defmt::error;
 use embassy_rp::pac::dma::regs::{ChTransCount, CtrlTrig};
 use embassy_rp::peripherals::{DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3, PIO0};
 use embassy_rp::pio::FifoJoin::TxOnly;
@@ -199,7 +200,7 @@ impl<'d> Hub75<'d> {
             "mov x isr      side 0b0",
             // Wait for the row program to set the ADDR pins
             "pixel:",
-            "out pins, 6    side 0b0",
+            "out pins, 8    side 0b0",
             "jmp x-- pixel  side 0b1", // clock out the pixel
             "irq 4          side 0b0", // tell the row program to set the next row
             "wait 1 irq 5   side 0b0",
@@ -251,18 +252,20 @@ impl<'d> Hub75<'d> {
         );
         sm0.set_pin_dirs(Direction::Out, &[&clk_pio_pin]);
         // Send width-1 to data SM
-        sm0.tx().try_push((DISPLAY_WIDTH - 1) as u32);
+        if !sm0.tx().try_push((DISPLAY_WIDTH - 1) as u32) {
+            error!("Failed to push width to SM0")
+        }
 
         // ===== ROW STATE MACHINE =====
         let row_program = pio_asm!(
             ".side_set 1",
             "pull           side 0b0", // Pull the height / 2 into OSR
-            "out isr, 32    side 0b0", // and move it to OSR
+            "out isr, 32    side 0b0", // and move it to ISR
             "pull           side 0b0", // Pull the color depth - 1 into OSR
             ".wrap_target",
             "mov x, isr     side 0b0",
             "addr:",
-            "mov pins, ~x   side 0b0", // Set the row address
+            "mov pins, x    side 0b0", // CHANGED: Don't invert the address!
             "mov y, osr     side 0b0",
             "row:",
             "wait 1 irq 4   side 0b0", // Wait until the data is clocked in
@@ -312,8 +315,13 @@ impl<'d> Hub75<'d> {
         sm1.set_pin_dirs(Direction::Out, &[&lat_pio_pin]);
 
         // Send parameters to row SM
-        sm1.tx().try_push((ACTIVE_ROWS - 1) as u32); // 31 (for 32 rows)
-        sm1.tx().try_push((COLOR_BITS - 1) as u32);
+        if !sm1.tx().try_push((ACTIVE_ROWS - 1) as u32) {
+            error!("Failed to push active rows")
+        } // 31 (for 32 rows)
+
+        if !sm1.tx().try_push((COLOR_BITS - 1) as u32) {
+            error!("Failed to push active colors")
+        }
 
         // ===== OUTPUT ENABLE STATE MACHINE =====
         let oe_program = pio_asm!(
@@ -440,15 +448,16 @@ impl<'d> Hub75<'d> {
             .write_value(ChTransCount(COLOR_BITS as u32));
 
         // Channel 3: Reset channel 2's read address
-        dma.ch(3).al1_ctrl().write(|w| {
-            w.set_incr_read(false);
-            w.set_incr_write(false);
-            w.set_data_size(DataSize::SIZE_WORD);
-            w.set_treq_sel(TreqSel::PERMANENT);
-            w.set_chain_to(2);
-            w.set_irq_quiet(true);
-            w.set_en(false); // Don't enable yet
-        });
+        let mut ch3_ctrl = CtrlTrig(0);
+        ch3_ctrl.set_incr_read(false);
+        ch3_ctrl.set_incr_write(false);
+        ch3_ctrl.set_data_size(DataSize::SIZE_WORD);
+        ch3_ctrl.set_treq_sel(TreqSel::PERMANENT);
+        ch3_ctrl.set_chain_to(2);
+        ch3_ctrl.set_irq_quiet(true);
+        ch3_ctrl.set_en(false); // Don't enable yet
+        // Channel 3: Reset channel 2's read address
+        dma.ch(3).al1_ctrl().write_value(ch3_ctrl.0);
 
         let delay_ptr_addr = &self.memory.delay_ptr as *const _ as u32;
         dma.ch(3).read_addr().write_value(delay_ptr_addr);
@@ -456,20 +465,17 @@ impl<'d> Hub75<'d> {
             .write_addr()
             .write_value(dma.ch(2).read_addr().as_ptr() as u32);
         dma.ch(3).trans_count().write_value(ChTransCount(1));
-        let mut ch3_ctrl = CtrlTrig(0);
-        ch3_ctrl.bits(dma.ch(2).regs().ch_read_addr.as_ptr() as u32);
+        // let mut ch3_ctrl = CtrlTrig(0);
+        // ch3_ctrl.bits(dma.ch(2).regs().ch_read_addr.as_ptr() as u32);
 
-        dma.ch(3).al2_write_addr_trig().write_value(|w| {});
+        // dma.ch(3).al2_write_addr_trig().write_value(|w| {});
 
         // Enable all channels
-        dma.ch(0).ctrl_trig().modify(|w| w.set_en(true));
         dma.ch(1).ctrl_trig().modify(|w| w.set_en(true));
-        dma.ch(2).ctrl_trig().modify(|w| w.set_en(true));
         dma.ch(3).ctrl_trig().modify(|w| w.set_en(true));
 
-        // Trigger the chains
-        dma.ch(1).ctrl_trig().modify(|w| w.set_en(true));
-        dma.ch(3).ctrl_trig().modify(|w| w.set_en(true));
+        dma.ch(0).ctrl_trig().modify(|w| w.set_en(true));
+        dma.ch(2).ctrl_trig().modify(|w| w.set_en(true));
     }
 
     fn start(&mut self) {
