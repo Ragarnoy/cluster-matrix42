@@ -3,6 +3,7 @@
 #![no_std]
 #![no_main]
 
+use common::animations;
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
@@ -13,7 +14,6 @@ use embassy_time::{Duration, Timer};
 use hub75_rp2350_driver::{DisplayMemory, Hub75};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
-use common::animations;
 
 // Multicore setup
 static mut CORE1_STACK: Stack<4096> = Stack::new();
@@ -154,10 +154,10 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         let anim_start = embassy_time::Instant::now();
 
         // Draw the current animation frame into the inactive buffer
-        // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
+        animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
 
         // Alternative animations to try:
-        animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_gradient();
         // display.draw_test_pattern();
 

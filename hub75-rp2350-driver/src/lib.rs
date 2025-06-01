@@ -33,7 +33,7 @@ bind_interrupts!(struct Irqs {
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 64;
 const ACTIVE_ROWS: usize = DISPLAY_HEIGHT / 2; // 32 rows (requires 5 address bits)
-const COLOR_BITS: usize = 8;
+const COLOR_BITS: usize = 12;
 
 // Memory layout: [row][bit_plane][column] -> packed RGB data
 const FRAME_SIZE: usize = ACTIVE_ROWS * COLOR_BITS * DISPLAY_WIDTH;
@@ -65,11 +65,12 @@ pub struct DisplayMemory {
 impl DisplayMemory {
     pub const fn new() -> Self {
         let mut fb0 = [0u8; FRAME_SIZE];
+        let mut fb1 = [0u8; FRAME_SIZE];
         let mut delays = compute_delays();
         Self {
-            fb0,
-            fb1: [0u8; FRAME_SIZE],
             fb_ptr: fb0.as_mut_ptr(),
+            fb0,
+            fb1,
             delays,
             delay_ptr: delays.as_mut_ptr(),
             current_buffer: false,
@@ -102,29 +103,32 @@ impl DisplayMemory {
     }
 
     /// Set a pixel in the draw buffer
-    pub fn set_pixel(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8) {
-        if x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT {
-            return;
-        }
+    pub fn set_pixel(&mut self, x: usize, y: usize, color: Rgb565, brightness: u8) {
+        // invert the screen
+        // let x = DISPLAY_WIDTH - 1 - x;
+        // let y = DISPLAY_HEIGHT - 1 - y;
+        // Half of the screen
+        let h = y > (DISPLAY_HEIGHT / 2) - 1;
+        let shift = if h { 3 } else { 0 };
 
-        let row = y % ACTIVE_ROWS;
-        let is_bottom_half = y >= ACTIVE_ROWS;
-        let shift = if is_bottom_half { 3 } else { 0 }; // R2,G2,B2 vs R1,G1,B1
-
-        let buffer = self.get_draw_buffer();
-
-        // For each bit plane
-        for bit in 0..COLOR_BITS {
-            let r_bit = (r >> bit) & 1;
-            let g_bit = (g >> bit) & 1;
-            let b_bit = (b >> bit) & 1;
-
-            let rgb_bits = (b_bit << 2) | (g_bit << 1) | r_bit;
-            let byte_idx = row * COLOR_BITS * DISPLAY_WIDTH + bit * DISPLAY_WIDTH + x;
-
-            // Clear existing bits and set new ones
-            buffer[byte_idx] &= !(0b111 << shift);
-            buffer[byte_idx] |= rgb_bits << shift;
+        let c_b: u16 = ((color.r() as f32) * (brightness as f32 / 255f32)) as u16;
+        let c_g: u16 = ((color.g() as f32) * (brightness as f32 / 255f32)) as u16;
+        let c_r: u16 = ((color.b() as f32) * (brightness as f32 / 255f32)) as u16;
+        let base_idx = x + ((y % (DISPLAY_HEIGHT / 2)) * DISPLAY_WIDTH * COLOR_BITS);
+        for b in 0..COLOR_BITS {
+            // Extract the n-th bit of each component of the color and pack them
+            let cr = c_r >> b & 0b1;
+            let cg = c_g >> b & 0b1;
+            let cb = c_b >> b & 0b1;
+            let packed_rgb = (cb << 2 | cg << 1 | cr) as u8;
+            let idx = base_idx + b * DISPLAY_WIDTH;
+            if self.fb_ptr == self.fb0.as_mut_ptr() {
+                self.fb1[idx] &= !(0b111 << shift);
+                self.fb1[idx] |= packed_rgb << shift;
+            } else {
+                self.fb0[idx] &= !(0b111 << shift);
+                self.fb0[idx] |= packed_rgb << shift;
+            }
         }
     }
 
@@ -359,7 +363,7 @@ impl<'d> Hub75<'d> {
             row_sm: sm1,
             oe_sm: sm2,
             memory,
-            brightness: 128,
+            brightness: 255,
             dma_fb,
             dma_fb_loop,
             dma_oe,
@@ -487,11 +491,11 @@ impl<'d> Hub75<'d> {
 
     /// Set a pixel color (non-blocking)
     pub fn set_pixel(&mut self, x: usize, y: usize, color: Rgb565) {
-        let r = ((color.r() as u16 * self.brightness as u16) >> 8) as u8;
-        let g = ((color.g() as u16 * self.brightness as u16) >> 8) as u8;
-        let b = ((color.b() as u16 * self.brightness as u16) >> 8) as u8;
+        // let r = ((color.r() as u16 * self.brightness as u16) >> 8) as u8;
+        // let g = ((color.g() as u16 * self.brightness as u16) >> 8) as u8;
+        // let b = ((color.b() as u16 * self.brightness as u16) >> 8) as u8;
 
-        self.memory.set_pixel(x, y, r, g, b);
+        self.memory.set_pixel(x, y, color, self.brightness);
     }
 
     /// Commit the current drawing buffer (non-blocking)
