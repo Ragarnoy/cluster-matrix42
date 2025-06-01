@@ -260,12 +260,12 @@ impl<'d> Hub75<'d> {
         let row_program = pio_asm!(
             ".side_set 1",
             "pull           side 0b0", // Pull the height / 2 into OSR
-            "out isr, 32    side 0b0", // and move it to ISR
+            "out isr, 32    side 0b0", // and move it to OSR
             "pull           side 0b0", // Pull the color depth - 1 into OSR
             ".wrap_target",
             "mov x, isr     side 0b0",
             "addr:",
-            "mov pins, x    side 0b0", // CHANGED: Don't invert the address!
+            "mov pins, ~x   side 0b0", // Set the row address
             "mov y, osr     side 0b0",
             "row:",
             "wait 1 irq 4   side 0b0", // Wait until the data is clocked in
@@ -325,14 +325,14 @@ impl<'d> Hub75<'d> {
 
         // ===== OUTPUT ENABLE STATE MACHINE =====
         let oe_program = pio_asm!(
-            ".side_set 1"
-            ".wrap_target",
-            "out x, 32      side 0b1",
-            "wait 1 irq 6   side 0b1",
-            "delay:",
-            "jmp x-- delay  side 0b0",
-            "irq 7          side 0b1",
-            ".wrap",
+              ".side_set 1"
+                ".wrap_target",
+                "out x, 32      side 0b1",
+                "wait 1 irq 6   side 0b1",
+                "delay:",
+                "jmp x-- delay  side 0b0",
+                "irq 7          side 0b1",
+                ".wrap",
         );
 
         let oe_installed = common.load_program(&oe_program.program);
@@ -392,21 +392,19 @@ impl<'d> Hub75<'d> {
         let mut ch0_ctrl = CtrlTrig(0);
         ch0_ctrl.set_incr_read(true);
         ch0_ctrl.set_incr_write(false);
-        ch0_ctrl.set_data_size(DataSize::SIZE_BYTE);
+        ch0_ctrl.set_data_size(DataSize::SIZE_WORD);
         ch0_ctrl.set_treq_sel(TreqSel::from_bits(data_dreq));
         ch0_ctrl.set_chain_to(1);
         ch0_ctrl.set_irq_quiet(true);
-        ch0_ctrl.set_en(false); // Don't enable yet
+        ch0_ctrl.set_en(true); // Enable yet !
         // Channel 0: Transfer framebuffer data to data_sm
         dma.ch(0).al1_ctrl().write_value(ch0_ctrl.0);
 
-        dma.ch(0)
-            .read_addr()
-            .write_value(self.memory.fb0.as_ptr() as u32);
-        dma.ch(0).write_addr().write_value(data_fifo_addr);
+        dma.ch(0).read_addr().write_value(self.memory.fb_ptr as u32);
         dma.ch(0)
             .trans_count()
-            .write_value(ChTransCount(FRAME_SIZE as u32));
+            .write_value(ChTransCount((FRAME_SIZE / 4) as u32));
+        dma.ch(0).write_addr().write_value(data_fifo_addr);
 
         let mut ch1_ctrl = CtrlTrig(0);
         ch1_ctrl.set_incr_read(false);
