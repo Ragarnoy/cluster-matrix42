@@ -3,7 +3,6 @@
 #![no_std]
 #![no_main]
 
-use common::animations;
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
@@ -225,28 +224,26 @@ pub fn debug_dma_status() {
 }
 
 fn debug_pio_state() {
-    unsafe {
-        let pio = embassy_rp::pac::PIO0;
+    let pio = embassy_rp::pac::PIO0;
 
-        // Check if state machines are enabled
-        let ctrl = pio.ctrl().read();
-        info!(
-            "PIO SM enabled: SM0={}, SM1={}, SM2={}",
-            ctrl.sm_enable() & 0x1 != 0,
-            ctrl.sm_enable() & 0x2 != 0,
-            ctrl.sm_enable() & 0x4 != 0
-        );
+    // Check if state machines are enabled
+    let ctrl = pio.ctrl().read();
+    info!(
+        "PIO SM enabled: SM0={}, SM1={}, SM2={}",
+        ctrl.sm_enable() & 0x1 != 0,
+        ctrl.sm_enable() & 0x2 != 0,
+        ctrl.sm_enable() & 0x4 != 0
+    );
 
-        // Check FIFO levels
-        let fstat = pio.fstat().read();
-        info!(
-            "PIO FIFO levels: TX0={}, TX1={}, TX2={}",
-            4 - ((fstat.txempty() >> 0) & 1) - ((fstat.txfull() >> 0) & 1) * 4,
-            4 - ((fstat.txempty() >> 1) & 1) - ((fstat.txfull() >> 1) & 1) * 4,
-            4 - ((fstat.txempty() >> 2) & 1) - ((fstat.txfull() >> 2) & 1) * 4
-        );
+    // Check FIFO levels
+    let fstat = pio.fstat().read();
+    info!(
+        "PIO FIFO levels: TX0={}, TX1={}, TX2={}",
+        4 - ((fstat.txempty() >> 0) & 1) - ((fstat.txfull() >> 0) & 1) * 4,
+        4 - ((fstat.txempty() >> 1) & 1) - ((fstat.txfull() >> 1) & 1) * 4,
+        4 - ((fstat.txempty() >> 2) & 1) - ((fstat.txfull() >> 2) & 1) * 4
+    );
 
-        // Check if SMs are stalled
-        info!("PIO stall status: {:#010b}", pio.fdebug().read().txstall());
-    }
+    // Check if SMs are stalled
+    info!("PIO stall status: {:#010b}", pio.fdebug().read().txstall());
 }

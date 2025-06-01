@@ -9,7 +9,7 @@
 #![no_std]
 
 use core::convert::Infallible;
-use embassy_rp::pac::dma::regs::ChTransCount;
+use embassy_rp::pac::dma::regs::{ChTransCount, CtrlTrig};
 use embassy_rp::peripherals::{DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3, PIO0};
 use embassy_rp::pio::FifoJoin::TxOnly;
 use embassy_rp::pio::program::pio_asm;
@@ -381,16 +381,16 @@ impl<'d> Hub75<'d> {
         self.memory.fb_ptr = self.memory.fb0.as_mut_ptr();
         self.memory.delay_ptr = self.memory.delays.as_mut_ptr();
 
+        let mut ch0_ctrl = CtrlTrig(0);
+        ch0_ctrl.set_incr_read(true);
+        ch0_ctrl.set_incr_write(false);
+        ch0_ctrl.set_data_size(DataSize::SIZE_BYTE);
+        ch0_ctrl.set_treq_sel(TreqSel::from_bits(data_dreq));
+        ch0_ctrl.set_chain_to(1);
+        ch0_ctrl.set_irq_quiet(true);
+        ch0_ctrl.set_en(false); // Don't enable yet
         // Channel 0: Transfer framebuffer data to data_sm
-        dma.ch(0).ctrl_trig().write(|w| {
-            w.set_incr_read(true);
-            w.set_incr_write(false);
-            w.set_data_size(DataSize::SIZE_BYTE);
-            w.set_treq_sel(TreqSel::from_bits(data_dreq));
-            w.set_chain_to(1);
-            w.set_irq_quiet(true);
-            w.set_en(false); // Don't enable yet
-        });
+        dma.ch(0).al1_ctrl().write_value(ch0_ctrl.0);
 
         dma.ch(0)
             .read_addr()
@@ -400,16 +400,16 @@ impl<'d> Hub75<'d> {
             .trans_count()
             .write_value(ChTransCount(FRAME_SIZE as u32));
 
+        let mut ch1_ctrl = CtrlTrig(0);
+        ch1_ctrl.set_incr_read(false);
+        ch1_ctrl.set_incr_write(false);
+        ch1_ctrl.set_data_size(DataSize::SIZE_WORD);
+        ch1_ctrl.set_treq_sel(TreqSel::PERMANENT);
+        ch1_ctrl.set_chain_to(0);
+        ch1_ctrl.set_irq_quiet(true);
+        ch1_ctrl.set_en(false); // Don't enable yet
         // Channel 1: Reset channel 0's read address
-        dma.ch(1).ctrl_trig().write(|w| {
-            w.set_incr_read(false);
-            w.set_incr_write(false);
-            w.set_data_size(DataSize::SIZE_WORD);
-            w.set_treq_sel(TreqSel::PERMANENT);
-            w.set_chain_to(0);
-            w.set_irq_quiet(true);
-            w.set_en(false); // Don't enable yet
-        });
+        dma.ch(1).al1_ctrl().write_value(ch1_ctrl.0);
 
         // This should read the pointer to fb_ptr, not fb_ptr itself
         let fb_ptr_addr = &self.memory.fb_ptr as *const _ as u32;
@@ -419,16 +419,17 @@ impl<'d> Hub75<'d> {
             .write_value(dma.ch(0).read_addr().as_ptr() as u32);
         dma.ch(1).trans_count().write_value(ChTransCount(1));
 
+        let mut ch2_ctrl = CtrlTrig(0);
+        ch2_ctrl.set_incr_read(true);
+        ch2_ctrl.set_incr_write(false);
+        ch2_ctrl.set_data_size(DataSize::SIZE_WORD);
+        ch2_ctrl.set_treq_sel(TreqSel::from_bits(oe_dreq));
+        ch2_ctrl.set_chain_to(3);
+        ch2_ctrl.set_irq_quiet(true);
+        ch2_ctrl.set_en(false); // Don't enable yet
+
         // Channel 2: Transfer delay values to oe_sm
-        dma.ch(2).ctrl_trig().write(|w| {
-            w.set_incr_read(true);
-            w.set_incr_write(false);
-            w.set_data_size(DataSize::SIZE_WORD);
-            w.set_treq_sel(TreqSel::from_bits(oe_dreq));
-            w.set_chain_to(3);
-            w.set_irq_quiet(true);
-            w.set_en(false); // Don't enable yet
-        });
+        dma.ch(2).al1_ctrl().write_value(ch2_ctrl.0);
 
         dma.ch(2)
             .read_addr()
@@ -439,7 +440,7 @@ impl<'d> Hub75<'d> {
             .write_value(ChTransCount(COLOR_BITS as u32));
 
         // Channel 3: Reset channel 2's read address
-        dma.ch(3).ctrl_trig().write(|w| {
+        dma.ch(3).al1_ctrl().write(|w| {
             w.set_incr_read(false);
             w.set_incr_write(false);
             w.set_data_size(DataSize::SIZE_WORD);
@@ -455,6 +456,10 @@ impl<'d> Hub75<'d> {
             .write_addr()
             .write_value(dma.ch(2).read_addr().as_ptr() as u32);
         dma.ch(3).trans_count().write_value(ChTransCount(1));
+        let mut ch3_ctrl = CtrlTrig(0);
+        ch3_ctrl.bits(dma.ch(2).regs().ch_read_addr.as_ptr() as u32);
+
+        dma.ch(3).al2_write_addr_trig().write_value(|w| {});
 
         // Enable all channels
         dma.ch(0).ctrl_trig().modify(|w| w.set_en(true));
