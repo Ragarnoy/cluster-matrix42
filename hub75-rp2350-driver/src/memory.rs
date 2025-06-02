@@ -30,6 +30,12 @@ pub struct DisplayMemory {
     current_buffer: bool,
 }
 
+impl Default for DisplayMemory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DisplayMemory {
     /// Create a new display memory instance
     pub const fn new() -> Self {

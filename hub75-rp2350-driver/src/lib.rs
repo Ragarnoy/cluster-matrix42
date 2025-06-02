@@ -340,7 +340,7 @@ impl<'d> Hub75<'d> {
         dma.ch(3).al1_ctrl().write_value(ch3_ctrl.0);
 
         // DMA channel 3 needs to read the current value of delay_ptr to reset channel 2's read address
-        /// Safety: delay_ptr is part of 'static memory and won't move. The DMA will only read this address.
+        // Safety: delay_ptr is part of 'static memory and won't move. The DMA will only read this address.
         let delay_ptr_addr = &self.memory.delay_ptr as *const _ as u32;
         dma.ch(3).read_addr().write_value(delay_ptr_addr);
         dma.ch(3)
