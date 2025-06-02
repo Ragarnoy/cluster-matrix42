@@ -490,10 +490,6 @@ impl<'d> Hub75<'d> {
             .write_addr()
             .write_value(dma.ch(2).read_addr().as_ptr() as u32);
         dma.ch(3).trans_count().write_value(ChTransCount(1));
-        // let mut ch3_ctrl = CtrlTrig(0);
-        // ch3_ctrl.bits(dma.ch(2).regs().ch_read_addr.as_ptr() as u32);
-
-        // dma.ch(3).al2_write_addr_trig().write_value(|w| {});
 
         // Enable all channels
         dma.ch(1).ctrl_trig().modify(|w| w.set_en(true));
