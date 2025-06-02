@@ -18,6 +18,7 @@ use embassy_rp::pio::{
     Config, Direction, InterruptHandler, Pio, PioPin, ShiftConfig, ShiftDirection, StateMachine,
 };
 use embassy_rp::{Peri, bind_interrupts};
+use embedded_graphics_core::prelude::WebColors;
 use embedded_graphics_core::{
     Pixel,
     draw_target::DrawTarget,
@@ -30,10 +31,24 @@ bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
 });
 
+static GAMMA8: [u8; 256] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
+    5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14,
+    14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27,
+    27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36, 37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46,
+    47, 48, 49, 50, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68, 69, 70, 72,
+    73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89, 90, 92, 93, 95, 96, 98, 99, 101, 102, 104,
+    105, 107, 109, 110, 112, 114, 115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137,
+    138, 140, 142, 144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
+    177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213, 215, 218, 220,
+    223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255,
+];
+
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 64;
 const ACTIVE_ROWS: usize = DISPLAY_HEIGHT / 2; // 32 rows (requires 5 address bits)
-const COLOR_BITS: usize = 12;
+const COLOR_BITS: usize = 8;
 
 // Memory layout: [row][bit_plane][column] -> packed RGB data
 const FRAME_SIZE: usize = ACTIVE_ROWS * COLOR_BITS * DISPLAY_WIDTH;
@@ -111,10 +126,15 @@ impl DisplayMemory {
         let h = y > (DISPLAY_HEIGHT / 2) - 1;
         let shift = if h { 3 } else { 0 };
 
-        let c_b: u16 = ((color.r() as f32) * (brightness as f32 / 255f32)) as u16;
-        let c_g: u16 = ((color.g() as f32) * (brightness as f32 / 255f32)) as u16;
-        let c_r: u16 = ((color.b() as f32) * (brightness as f32 / 255f32)) as u16;
+        let mut c_g: u16 = (((color.r() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+        let mut c_b: u16 = (((color.g() << 2) as f32) * (brightness as f32 / 255f32)) as u16;
+        let mut c_r: u16 = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
         let base_idx = x + ((y % (DISPLAY_HEIGHT / 2)) * DISPLAY_WIDTH * COLOR_BITS);
+
+        c_r = GAMMA8[c_r as usize] as u16;
+        c_g = GAMMA8[c_g as usize] as u16;
+        c_b = GAMMA8[c_b as usize] as u16;
+
         for b in 0..COLOR_BITS {
             // Extract the n-th bit of each component of the color and pack them
             let cr = c_r >> b & 0b1;
@@ -523,7 +543,7 @@ impl<'d> Hub75<'d> {
 
         for y in 0..DISPLAY_HEIGHT {
             for x in 0..DISPLAY_WIDTH {
-                let color = match (x / 8, y / 8) {
+                let color = match (x / 16, y / 16) {
                     (0, 0) => Rgb565::RED,
                     (1, 0) => Rgb565::GREEN,
                     (2, 0) => Rgb565::BLUE,
@@ -531,7 +551,8 @@ impl<'d> Hub75<'d> {
                     (0, 1) => Rgb565::CYAN,
                     (1, 1) => Rgb565::MAGENTA,
                     (2, 1) => Rgb565::YELLOW,
-                    _ => Rgb565::new(x as u8 % 32, y as u8 % 64, (x + y) as u8 % 32),
+                    (3, 1) => Rgb565::new(31, 31, 0),
+                    _ => Rgb565::new(x as u8 >> 1, 31, (y - 32) as u8),
                 };
                 self.set_pixel(x, y, color);
             }
