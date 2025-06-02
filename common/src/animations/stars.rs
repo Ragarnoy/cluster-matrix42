@@ -26,14 +26,14 @@ where
     D: DrawTarget<Color = Rgb565>,
 {
     // Clear display with dark blue background
-    display.clear(Rgb565::new(0, 0, 16))?;
+    display.clear(Rgb565::new(0, 0, 12))?;
 
     // Calculate animation parameters
     let t = frame as f32 * 0.05;
 
     // Background gradient
     for y in 0..64 {
-        let gradient_color = Rgb565::new(0, 0, (y >> 1) as u8);
+        let gradient_color = Rgb565::new(0, 0, ((y + 2) as f32 * 0.27) as u8);
 
         Rectangle::new(Point::new(0, y), Size::new(64, 1))
             .into_styled(PrimitiveStyle::with_fill(gradient_color))
