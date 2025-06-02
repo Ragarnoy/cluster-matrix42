@@ -89,7 +89,7 @@ where
             Point::new(p2.x as i32 + x_offset, p2.y as i32 + y_offset),
             Point::new(p3.x as i32 + x_offset, p3.y as i32 + y_offset),
         )
-        .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
+        .into_styled(PrimitiveStyle::with_fill(Rgb565::BLACK))
         .draw(display)?
     }
 
@@ -123,7 +123,7 @@ pub fn draw_animation_frame<D>(display: &mut D, frame: u32) -> Result<(), D::Err
 where
     D: DrawTarget<Color = Rgb565>,
 {
-    display.clear(Rgb565::new(0, 0, 0))?;
+    display.clear(Rgb565::WHITE)?;
 
     let t = frame as f32 * 0.01;
 
