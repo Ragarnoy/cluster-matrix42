@@ -65,7 +65,7 @@ pub struct DisplayMemory {
 impl DisplayMemory {
     pub const fn new() -> Self {
         let mut fb0 = [0u8; FRAME_SIZE];
-        let mut fb1 = [0u8; FRAME_SIZE];
+        let fb1 = [0u8; FRAME_SIZE];
         let mut delays = compute_delays();
         Self {
             fb_ptr: fb0.as_mut_ptr(),
@@ -145,9 +145,13 @@ pub struct Hub75<'d> {
     oe_sm: StateMachine<'d, PIO0, 2>,
 
     // DMA channels (will be consumed during setup)
+    #[allow(dead_code)]
     dma_fb: Peri<'d, DMA_CH0>,
+    #[allow(dead_code)]
     dma_fb_loop: Peri<'d, DMA_CH1>,
+    #[allow(dead_code)]
     dma_oe: Peri<'d, DMA_CH2>,
+    #[allow(dead_code)]
     dma_oe_loop: Peri<'d, DMA_CH3>,
 
     // Display memory
