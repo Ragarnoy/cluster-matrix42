@@ -158,7 +158,6 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
 
         // Alternative animations to try:
         animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
-        // display.draw_test_gradient();
         // display.draw_test_pattern();
 
         let anim_time = anim_start.elapsed();
@@ -179,8 +178,6 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
 
         // Control animation frame rate (optional - you can go as fast as you want)
         // Timer::after(Duration::from_millis(16)).await; // ~60 FPS animation
-        // debug_dma_status();
-        // debug_pio_state();
 
         // Increment frame counter
         frame_counter = frame_counter.wrapping_add(1);
@@ -197,54 +194,4 @@ async fn core1_task(mut led: gpio::Output<'static>) {
         led.set_low();
         Timer::after(Duration::from_secs(1)).await;
     }
-}
-
-pub fn debug_dma_status() {
-    let dma = embassy_rp::pac::DMA;
-
-    for i in 0..4 {
-        let ctrl = dma.ch(i).ctrl_trig().read();
-        let trans_count = dma.ch(i).trans_count().read();
-        defmt::info!(
-            "DMA CH{}: enabled={}, busy={}, trans_count={}",
-            i,
-            ctrl.en(),
-            ctrl.busy(),
-            trans_count.0
-        );
-    }
-
-    // Check if PIOs are stalled
-    let pio0 = embassy_rp::pac::PIO0;
-    let fdebug = pio0.fdebug().read();
-    defmt::info!(
-        "PIO0 FDEBUG: txstall={:x}, txover={:x}",
-        fdebug.txstall(),
-        fdebug.txover()
-    );
-}
-
-fn debug_pio_state() {
-    let pio = embassy_rp::pac::PIO0;
-
-    // Check if state machines are enabled
-    let ctrl = pio.ctrl().read();
-    info!(
-        "PIO SM enabled: SM0={}, SM1={}, SM2={}",
-        ctrl.sm_enable() & 0x1 != 0,
-        ctrl.sm_enable() & 0x2 != 0,
-        ctrl.sm_enable() & 0x4 != 0
-    );
-
-    // Check FIFO levels
-    let fstat = pio.fstat().read();
-    info!(
-        "PIO FIFO levels: TX0={}, TX1={}, TX2={}",
-        4 - ((fstat.txempty() >> 0) & 1) - ((fstat.txfull() >> 0) & 1) * 4,
-        4 - ((fstat.txempty() >> 1) & 1) - ((fstat.txfull() >> 1) & 1) * 4,
-        4 - ((fstat.txempty() >> 2) & 1) - ((fstat.txfull() >> 2) & 1) * 4
-    );
-
-    // Check if SMs are stalled
-    info!("PIO stall status: {:#010b}", pio.fdebug().read().txstall());
 }

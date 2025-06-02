@@ -1,6 +1,6 @@
 use embedded_graphics::{
     pixelcolor::Rgb565,
-    prelude::{DrawTarget, Drawable, Point, Primitive, RgbColor, WebColors},
+    prelude::{DrawTarget, Drawable, Point, Primitive, RgbColor},
     primitives::{PrimitiveStyle, Triangle},
 };
 

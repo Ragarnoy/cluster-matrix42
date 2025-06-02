@@ -18,7 +18,6 @@ use embassy_rp::pio::{
     Config, Direction, InterruptHandler, Pio, PioPin, ShiftConfig, ShiftDirection, StateMachine,
 };
 use embassy_rp::{Peri, bind_interrupts};
-use embedded_graphics_core::prelude::WebColors;
 use embedded_graphics_core::{
     Pixel,
     draw_target::DrawTarget,
