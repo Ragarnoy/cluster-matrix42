@@ -87,4 +87,4 @@ jobs:
               echo "ERROR: Binary size increased by more than 15%!"
               exit 1
             fi
-          fi*
+          fi
