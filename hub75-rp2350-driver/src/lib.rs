@@ -1,169 +1,81 @@
 //! High-Performance Hub75 LED Matrix Driver for RP2350 with Embassy
 //!
-//! Achieves ~2100Hz refresh rate with zero CPU overhead using:
-//! - 3 coordinated PIO state machines
-//! - Chained DMA for continuous operation
-//! - Binary color modulation
-//! - Double buffering
+//! This driver achieves ~2100Hz refresh rate with zero CPU overhead using:
+//! - 3 coordinated PIO state machines for pixel data, row addressing, and output enable
+//! - Chained DMA for continuous operation without CPU intervention
+//! - Binary Color Modulation (BCM) for smooth color gradients
+//! - Double buffering for tear-free animation
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use hub75_rp2350_driver::{Hub75, DisplayMemory};
+//! use embassy_rp::peripherals::*;
+//!
+//! // Create static display memory
+//! static mut DISPLAY_MEMORY: DisplayMemory = DisplayMemory::new();
+//!
+//! // Initialize the driver (assuming you have the required pins)
+//! let mut display = Hub75::new(
+//!     pio0,                           // PIO peripheral
+//!     (dma_ch0, dma_ch1, dma_ch2, dma_ch3), // DMA channels
+//!     unsafe { &mut DISPLAY_MEMORY }, // Display memory
+//!     r1_pin, g1_pin, b1_pin,         // Top half RGB
+//!     r2_pin, g2_pin, b2_pin,         // Bottom half RGB  
+//!     clk_pin,                        // Pixel clock
+//!     addr_a_pin, addr_b_pin,         // Row address pins
+//!     addr_c_pin, addr_d_pin, addr_e_pin,
+//!     lat_pin,                        // Latch
+//!     oe_pin,                         // Output enable
+//! );
+//!
+//! // Draw pixels
+//! display.set_pixel(10, 20, Rgb565::RED);
+//! display.commit(); // Make changes visible
+//! ```
 
 #![no_std]
 
+pub mod config;
+pub mod dma;
+pub mod lut;
+pub mod memory;
+pub mod pio;
+
+pub use config::*;
 use core::convert::Infallible;
-use defmt::error;
-use embassy_rp::pac::dma::regs::{ChTransCount, CtrlTrig};
+use defmt::info;
+pub use dma::{DmaStatus, Hub75DmaChannels};
 use embassy_rp::peripherals::{DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3, PIO0};
-use embassy_rp::pio::FifoJoin::TxOnly;
-use embassy_rp::pio::program::pio_asm;
-use embassy_rp::pio::{
-    Config, Direction, InterruptHandler, Pio, PioPin, ShiftConfig, ShiftDirection, StateMachine,
-};
+use embassy_rp::pio::{InterruptHandler, PioPin};
 use embassy_rp::{Peri, bind_interrupts};
+use embedded_graphics_core::prelude::RgbColor;
 use embedded_graphics_core::{
     Pixel,
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Size},
-    pixelcolor::{Rgb565, RgbColor},
+    pixelcolor::Rgb565,
 };
-use fixed_macro::__fixed::types::U24F8;
+pub use memory::DisplayMemory;
+pub use pio::Hub75StateMachines;
 
+// Bind PIO interrupts
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
 });
 
-static GAMMA8: [u8; 256] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
-    5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14,
-    14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27,
-    27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36, 37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46,
-    47, 48, 49, 50, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68, 69, 70, 72,
-    73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89, 90, 92, 93, 95, 96, 98, 99, 101, 102, 104,
-    105, 107, 109, 110, 112, 114, 115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137,
-    138, 140, 142, 144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
-    177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213, 215, 218, 220,
-    223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255,
-];
-
-const DISPLAY_WIDTH: usize = 64;
-const DISPLAY_HEIGHT: usize = 64;
-const ACTIVE_ROWS: usize = DISPLAY_HEIGHT / 2; // 32 rows (requires 5 address bits)
-const COLOR_BITS: usize = 8;
-
-// Memory layout: [row][bit_plane][column] -> packed RGB data
-const FRAME_SIZE: usize = ACTIVE_ROWS * COLOR_BITS * DISPLAY_WIDTH;
-
-/// Compute delay values for binary color modulation
-const fn compute_delays() -> [u32; COLOR_BITS] {
-    let mut delays = [0u32; COLOR_BITS];
-    let mut i = 0;
-    while i < COLOR_BITS {
-        delays[i] = (1 << i) - 1; // 0, 1, 3, 7, 15, 31, 63, 127
-        i += 1;
-    }
-    delays
-}
-
-/// Double-buffered framebuffer with hardware-optimized layout
-pub struct DisplayMemory {
-    // Double buffers - each byte contains RGB data for 2 pixels
-    fb0: [u8; FRAME_SIZE],
-    fb1: [u8; FRAME_SIZE],
-    // DMA will read this pointer to know which buffer to use
-    fb_ptr: *mut u8,
-    // Delay values for binary color modulation
-    delays: [u32; COLOR_BITS],
-    delay_ptr: *mut u32,
-    current_buffer: bool, // false = fb0, true = fb1
-}
-
-impl DisplayMemory {
-    pub const fn new() -> Self {
-        let mut fb0 = [0u8; FRAME_SIZE];
-        let fb1 = [0u8; FRAME_SIZE];
-        let mut delays = compute_delays();
-        Self {
-            fb_ptr: fb0.as_mut_ptr(),
-            fb0,
-            fb1,
-            delays,
-            delay_ptr: delays.as_mut_ptr(),
-            current_buffer: false,
-        }
-    }
-
-    /// Get the currently inactive buffer for drawing
-    fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
-        if self.current_buffer {
-            &mut self.fb0
-        } else {
-            &mut self.fb1
-        }
-    }
-
-    /// Commit the drawn buffer and make it active
-    pub fn commit(&mut self) {
-        // Switch buffers
-        self.current_buffer = !self.current_buffer;
-
-        // Update pointer for DMA
-        self.fb_ptr = if self.current_buffer {
-            self.fb1.as_mut_ptr()
-        } else {
-            self.fb0.as_mut_ptr()
-        };
-
-        // Clear the new draw buffer
-        self.get_draw_buffer().fill(0);
-    }
-
-    /// Set a pixel in the draw buffer
-    pub fn set_pixel(&mut self, x: usize, y: usize, color: Rgb565, brightness: u8) {
-        // invert the screen
-        // let x = DISPLAY_WIDTH - 1 - x;
-        // let y = DISPLAY_HEIGHT - 1 - y;
-        // Half of the screen
-        let h = y > (DISPLAY_HEIGHT / 2) - 1;
-        let shift = if h { 3 } else { 0 };
-
-        let mut c_g: u16 = (((color.r() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
-        let mut c_b: u16 = (((color.g() << 2) as f32) * (brightness as f32 / 255f32)) as u16;
-        let mut c_r: u16 = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
-        let base_idx = x + ((y % (DISPLAY_HEIGHT / 2)) * DISPLAY_WIDTH * COLOR_BITS);
-
-        c_r = GAMMA8[c_r as usize] as u16;
-        c_g = GAMMA8[c_g as usize] as u16;
-        c_b = GAMMA8[c_b as usize] as u16;
-
-        for b in 0..COLOR_BITS {
-            // Extract the n-th bit of each component of the color and pack them
-            let cr = c_r >> b & 0b1;
-            let cg = c_g >> b & 0b1;
-            let cb = c_b >> b & 0b1;
-            let packed_rgb = (cb << 2 | cg << 1 | cr) as u8;
-            let idx = base_idx + b * DISPLAY_WIDTH;
-            if self.fb_ptr == self.fb0.as_mut_ptr() {
-                self.fb1[idx] &= !(0b111 << shift);
-                self.fb1[idx] |= packed_rgb << shift;
-            } else {
-                self.fb0[idx] &= !(0b111 << shift);
-                self.fb0[idx] |= packed_rgb << shift;
-            }
-        }
-    }
-
-    pub fn clear(&mut self) {
-        self.get_draw_buffer().fill(0);
-    }
-}
-
-/// High-performance Hub75 driver with three PIO state machines
+/// High-performance Hub75 LED matrix driver
+///
+/// This driver uses a sophisticated hardware-accelerated approach:
+/// - PIO state machines handle the low-level Hub75 protocol
+/// - DMA provides continuous data flow without CPU intervention
+/// - Double buffering enables smooth animations
+/// - Binary Color Modulation provides smooth color gradients
 pub struct Hub75<'d> {
-    // PIO state machines
-    data_sm: StateMachine<'d, PIO0, 0>,
-    row_sm: StateMachine<'d, PIO0, 1>,
-    oe_sm: StateMachine<'d, PIO0, 2>,
+    /// PIO state machines for Hub75 control
+    _state_machines: Hub75StateMachines<'d>,
 
-    // DMA channels (will be consumed during setup)
+    /// DMA channels (stored but consumed during setup)
     #[allow(dead_code)]
     dma_fb: Peri<'d, DMA_CH0>,
     #[allow(dead_code)]
@@ -173,14 +85,28 @@ pub struct Hub75<'d> {
     #[allow(dead_code)]
     dma_oe_loop: Peri<'d, DMA_CH3>,
 
-    // Display memory
+    /// Display memory with double buffering
     memory: &'static mut DisplayMemory,
 
-    // Configuration
+    /// Global brightness control (0-255)
     brightness: u8,
 }
 
 impl<'d> Hub75<'d> {
+    /// Create a new Hub75 driver instance
+    ///
+    /// # Arguments
+    ///
+    /// * `pio` - PIO0 peripheral
+    /// * `dma_channels` - Tuple of 4 DMA channels (CH0-CH3)
+    /// * `memory` - Static reference to display memory
+    /// * Pin assignments following Hub75 standard:
+    ///   - `r1_pin`, `g1_pin`, `b1_pin` - RGB for top half
+    ///   - `r2_pin`, `g2_pin`, `b2_pin` - RGB for bottom half
+    ///   - `clk_pin` - Pixel clock
+    ///   - `addr_a_pin` through `addr_e_pin` - 5-bit row address
+    ///   - `lat_pin` - Latch signal
+    ///   - `oe_pin` - Output enable (active low)
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         pio: Peri<'d, PIO0>,
@@ -191,214 +117,146 @@ impl<'d> Hub75<'d> {
             Peri<'d, DMA_CH3>,
         ),
         memory: &'static mut DisplayMemory,
-        // PIO-controlled pins
+        // RGB data pins
         r1_pin: Peri<'d, impl PioPin>,
         g1_pin: Peri<'d, impl PioPin>,
         b1_pin: Peri<'d, impl PioPin>,
         r2_pin: Peri<'d, impl PioPin>,
         g2_pin: Peri<'d, impl PioPin>,
         b2_pin: Peri<'d, impl PioPin>,
+        // Control pins
         clk_pin: Peri<'d, impl PioPin>,
         addr_a_pin: Peri<'d, impl PioPin>,
         addr_b_pin: Peri<'d, impl PioPin>,
         addr_c_pin: Peri<'d, impl PioPin>,
         addr_d_pin: Peri<'d, impl PioPin>,
-        addr_e_pin: Peri<'d, impl PioPin>, // Added E address pin
+        addr_e_pin: Peri<'d, impl PioPin>,
         lat_pin: Peri<'d, impl PioPin>,
         oe_pin: Peri<'d, impl PioPin>,
     ) -> Self {
-        let Pio {
-            mut common,
-            mut sm0,
-            mut sm1,
-            mut sm2,
-            ..
-        } = Pio::new(pio, Irqs);
-
-        // Initialize memory pointers
+        // Initialize memory pointers to point to actual data
         memory.fb_ptr = memory.fb0.as_mut_ptr();
         memory.delay_ptr = memory.delays.as_mut_ptr();
 
-        // ===== DATA STATE MACHINE =====
-        let data_program = pio_asm!(
-            ".side_set 1",
-            "out isr, 32    side 0b0",
-            ".wrap_target",
-            "mov x isr      side 0b0",
-            // Wait for the row program to set the ADDR pins
-            "pixel:",
-            "out pins, 8    side 0b0",
-            "jmp x-- pixel  side 0b1", // clock out the pixel
-            "irq 4          side 0b0", // tell the row program to set the next row
-            "wait 1 irq 5   side 0b0",
-            ".wrap",
+        info!("Initializing Hub75 PIO state machines...");
+
+        // Initialize PIO state machines
+        let mut state_machines = Hub75StateMachines::new(
+            pio, r1_pin, g1_pin, b1_pin, r2_pin, g2_pin, b2_pin, clk_pin, addr_a_pin, addr_b_pin,
+            addr_c_pin, addr_d_pin, addr_e_pin, lat_pin, oe_pin,
         );
 
-        let data_installed = common.load_program(&data_program.program);
+        info!("Starting Hub75 state machines...");
 
-        let data_pins = [
-            common.make_pio_pin(r1_pin),
-            common.make_pio_pin(g1_pin),
-            common.make_pio_pin(b1_pin),
-            common.make_pio_pin(r2_pin),
-            common.make_pio_pin(g2_pin),
-            common.make_pio_pin(b2_pin),
-        ];
-        let clk_pio_pin = common.make_pio_pin(clk_pin);
+        // Start the state machines
+        state_machines.start();
 
-        let mut data_cfg = Config::default();
-        data_cfg.fifo_join = TxOnly;
-        data_cfg.use_program(&data_installed, &[&clk_pio_pin]);
-        data_cfg.set_out_pins(&[
-            &data_pins[0],
-            &data_pins[1],
-            &data_pins[2],
-            &data_pins[3],
-            &data_pins[4],
-            &data_pins[5],
-        ]);
-        data_cfg.shift_out = ShiftConfig {
-            auto_fill: true,
-            threshold: 32,
-            direction: ShiftDirection::Right,
-        };
-        data_cfg.clock_divider = U24F8::from_num(2.0);
-
-        sm0.set_config(&data_cfg);
-
-        sm0.set_pin_dirs(
-            Direction::Out,
-            &[
-                &data_pins[0],
-                &data_pins[1],
-                &data_pins[2],
-                &data_pins[3],
-                &data_pins[4],
-                &data_pins[5],
-            ],
-        );
-        sm0.set_pin_dirs(Direction::Out, &[&clk_pio_pin]);
-        // Send width-1 to data SM
-        if !sm0.tx().try_push((DISPLAY_WIDTH - 1) as u32) {
-            error!("Failed to push width to SM0")
-        }
-
-        // ===== ROW STATE MACHINE =====
-        let row_program = pio_asm!(
-            ".side_set 1",
-            "pull           side 0b0", // Pull the height / 2 into OSR
-            "out isr, 32    side 0b0", // and move it to OSR
-            "pull           side 0b0", // Pull the color depth - 1 into OSR
-            ".wrap_target",
-            "mov x, isr     side 0b0",
-            "addr:",
-            "mov pins, ~x   side 0b0", // Set the row address
-            "mov y, osr     side 0b0",
-            "row:",
-            "wait 1 irq 4   side 0b0", // Wait until the data is clocked in
-            "nop            side 0b1",
-            "irq 6          side 0b1", // Display the latched data
-            "irq 5          side 0b0", // Clock in next row
-            "wait 1 irq 7   side 0b0", // Wait for the OE cycle to complete
-            "jmp y-- row    side 0b0",
-            "jmp x-- addr   side 0b0",
-            ".wrap",
-        );
-
-        let row_installed = common.load_program(&row_program.program);
-
-        // All 5 address pins: A, B, C, D, E
-        let addr_pins = [
-            common.make_pio_pin(addr_a_pin),
-            common.make_pio_pin(addr_b_pin),
-            common.make_pio_pin(addr_c_pin),
-            common.make_pio_pin(addr_d_pin),
-            common.make_pio_pin(addr_e_pin), // Added E pin
-        ];
-        let lat_pio_pin = common.make_pio_pin(lat_pin);
-
-        let mut row_cfg = Config::default();
-        row_cfg.use_program(&row_installed, &[&lat_pio_pin]);
-        row_cfg.set_out_pins(&[
-            &addr_pins[0],
-            &addr_pins[1],
-            &addr_pins[2],
-            &addr_pins[3],
-            &addr_pins[4],
-        ]); // Now uses all 5 address pins
-        row_cfg.clock_divider = U24F8::from_num(1.5);
-
-        sm1.set_config(&row_cfg);
-        sm1.set_pin_dirs(
-            Direction::Out,
-            &[
-                &addr_pins[0],
-                &addr_pins[1],
-                &addr_pins[2],
-                &addr_pins[3],
-                &addr_pins[4],
-            ],
-        );
-        sm1.set_pin_dirs(Direction::Out, &[&lat_pio_pin]);
-
-        // Send parameters to row SM
-        if !sm1.tx().try_push((ACTIVE_ROWS - 1) as u32) {
-            error!("Failed to push active rows")
-        } // 31 (for 32 rows)
-
-        if !sm1.tx().try_push((COLOR_BITS - 1) as u32) {
-            error!("Failed to push active colors")
-        }
-
-        // ===== OUTPUT ENABLE STATE MACHINE =====
-        let oe_program = pio_asm!(
-              ".side_set 1"
-                ".wrap_target",
-                "out x, 32      side 0b1",
-                "wait 1 irq 6   side 0b1",
-                "delay:",
-                "jmp x-- delay  side 0b0",
-                "irq 7          side 0b1",
-                ".wrap",
-        );
-
-        let oe_installed = common.load_program(&oe_program.program);
-        let oe_pio_pin = common.make_pio_pin(oe_pin);
-
-        let mut oe_cfg = Config::default();
-        oe_cfg.fifo_join = TxOnly;
-        oe_cfg.use_program(&oe_installed, &[&oe_pio_pin]);
-        oe_cfg.shift_out = ShiftConfig {
-            auto_fill: true,
-            threshold: 32,
-            direction: ShiftDirection::Right,
-        };
-        oe_cfg.clock_divider = U24F8::from_num(1.5);
-
-        sm2.set_config(&oe_cfg);
-        sm2.set_pin_dirs(Direction::Out, &[&oe_pio_pin]);
-
-        let (dma_fb, dma_fb_loop, dma_oe, dma_oe_loop) = dma_channels;
-        // Store DMA channel IDs for chaining
-
+        // Create driver instance
         let mut driver = Self {
-            data_sm: sm0,
-            row_sm: sm1,
-            oe_sm: sm2,
+            _state_machines: state_machines,
+            dma_fb: dma_channels.0,
+            dma_fb_loop: dma_channels.1,
+            dma_oe: dma_channels.2,
+            dma_oe_loop: dma_channels.3,
             memory,
-            brightness: 255,
-            dma_fb,
-            dma_fb_loop,
-            dma_oe,
-            dma_oe_loop,
+            brightness: 255, // Full brightness by default
         };
 
+        info!("Initializing Hub75 DMA channels...");
+
+        // Setup DMA after driver creation
         driver.setup_dma();
-        driver.start();
         driver
     }
 
+    /// Set a pixel color (non-blocking)
+    ///
+    /// # Arguments
+    /// * `x` - X coordinate (0 to 63)
+    /// * `y` - Y coordinate (0 to 63)
+    /// * `color` - RGB565 color value
+    pub fn set_pixel(&mut self, x: usize, y: usize, color: Rgb565) {
+        self.memory.set_pixel(x, y, color, self.brightness);
+    }
+
+    /// Commit the current drawing buffer (non-blocking)
+    ///
+    /// This swaps the double buffers, making the drawn frame visible
+    /// and providing a fresh buffer for the next frame.
+    pub fn commit(&mut self) {
+        self.memory.commit();
+    }
+
+    /// Clear the drawing buffer
+    ///
+    /// Sets all pixels in the draw buffer to black.
+    /// Call `commit()` to make the cleared display visible.
+    pub fn clear(&mut self) {
+        self.memory.clear();
+    }
+
+    /// Set overall brightness (0-255)
+    ///
+    /// This affects all subsequently drawn pixels.
+    /// Existing pixels in the buffer are not affected.
+    pub fn set_brightness(&mut self, brightness: u8) {
+        self.brightness = brightness;
+    }
+
+    /// Get current brightness setting
+    pub fn get_brightness(&self) -> u8 {
+        self.brightness
+    }
+
+    /// Draw a test pattern for verification
+    ///
+    /// Creates a colorful test pattern to verify correct operation:
+    /// - Color blocks in different regions
+    /// - Gradient in one corner
+    pub fn draw_test_pattern(&mut self) {
+        self.clear();
+
+        for y in 0..DISPLAY_HEIGHT {
+            for x in 0..DISPLAY_WIDTH {
+                let color = match (x / 16, y / 16) {
+                    (0, 0) => Rgb565::RED,
+                    (1, 0) => Rgb565::GREEN,
+                    (2, 0) => Rgb565::BLUE,
+                    (3, 0) => Rgb565::WHITE,
+                    (0, 1) => Rgb565::CYAN,
+                    (1, 1) => Rgb565::MAGENTA,
+                    (2, 1) => Rgb565::YELLOW,
+                    (3, 1) => Rgb565::new(31, 31, 0), // Orange
+                    _ => {
+                        // Gradient in bottom half
+                        let r = (x * 31 / (DISPLAY_WIDTH - 1)) as u8;
+                        let g = 31;
+                        let b = ((y - 32) * 31 / 31) as u8;
+                        Rgb565::new(r, g, b)
+                    }
+                };
+                self.set_pixel(x, y, color);
+            }
+        }
+    }
+
+    /// Get DMA status for debugging
+    pub fn get_dma_status(&self) -> DmaStatus {
+        let dma = embassy_rp::pac::DMA;
+
+        DmaStatus {
+            ch0_busy: dma.ch(0).ctrl_trig().read().busy(),
+            ch1_busy: dma.ch(1).ctrl_trig().read().busy(),
+            ch2_busy: dma.ch(2).ctrl_trig().read().busy(),
+            ch3_busy: dma.ch(3).ctrl_trig().read().busy(),
+            ch0_trans_count: dma.ch(0).trans_count().read().0,
+            ch2_trans_count: dma.ch(2).trans_count().read().0,
+        }
+    }
+
+    /// Setup DMA channels (CRITICAL: matches original exactly)
     fn setup_dma(&mut self) {
+        use embassy_rp::pac::dma::regs::{ChTransCount, CtrlTrig};
         use embassy_rp::pac::dma::vals::{DataSize, TreqSel};
 
         let dma = embassy_rp::pac::DMA;
@@ -498,64 +356,9 @@ impl<'d> Hub75<'d> {
         dma.ch(0).ctrl_trig().modify(|w| w.set_en(true));
         dma.ch(2).ctrl_trig().modify(|w| w.set_en(true));
     }
-
-    fn start(&mut self) {
-        // Start all state machines
-        self.data_sm.set_enable(true);
-        self.row_sm.set_enable(true);
-        self.oe_sm.set_enable(true);
-        let pio0 = embassy_rp::pac::PIO0;
-        defmt::info!("FSTAT: 0x{:08x}", pio0.fstat().read().0);
-    }
-
-    /// Set a pixel color (non-blocking)
-    pub fn set_pixel(&mut self, x: usize, y: usize, color: Rgb565) {
-        // let r = ((color.r() as u16 * self.brightness as u16) >> 8) as u8;
-        // let g = ((color.g() as u16 * self.brightness as u16) >> 8) as u8;
-        // let b = ((color.b() as u16 * self.brightness as u16) >> 8) as u8;
-
-        self.memory.set_pixel(x, y, color, self.brightness);
-    }
-
-    /// Commit the current drawing buffer (non-blocking)
-    pub fn commit(&mut self) {
-        self.memory.commit();
-    }
-
-    /// Clear the drawing buffer
-    pub fn clear(&mut self) {
-        self.memory.clear();
-    }
-
-    /// Set overall brightness (0-255)
-    pub fn set_brightness(&mut self, brightness: u8) {
-        self.brightness = brightness;
-    }
-
-    /// Draw a test pattern
-    pub fn draw_test_pattern(&mut self) {
-        self.clear();
-
-        for y in 0..DISPLAY_HEIGHT {
-            for x in 0..DISPLAY_WIDTH {
-                let color = match (x / 16, y / 16) {
-                    (0, 0) => Rgb565::RED,
-                    (1, 0) => Rgb565::GREEN,
-                    (2, 0) => Rgb565::BLUE,
-                    (3, 0) => Rgb565::WHITE,
-                    (0, 1) => Rgb565::CYAN,
-                    (1, 1) => Rgb565::MAGENTA,
-                    (2, 1) => Rgb565::YELLOW,
-                    (3, 1) => Rgb565::new(31, 31, 0),
-                    _ => Rgb565::new(x as u8 >> 1, 31, (y - 32) as u8),
-                };
-                self.set_pixel(x, y, color);
-            }
-        }
-    }
 }
 
-// Implement embedded-graphics traits
+// Implement embedded-graphics traits for easy integration
 impl<'d> OriginDimensions for Hub75<'d> {
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
