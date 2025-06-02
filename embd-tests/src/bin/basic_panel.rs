@@ -154,10 +154,10 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         let anim_start = embassy_time::Instant::now();
 
         // Draw the current animation frame into the inactive buffer
-        animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
 
         // Alternative animations to try:
-        // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
+        animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_gradient();
         // display.draw_test_pattern();
 
@@ -178,9 +178,9 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         }
 
         // Control animation frame rate (optional - you can go as fast as you want)
-        Timer::after(Duration::from_millis(16)).await; // ~60 FPS animation
-        debug_dma_status();
-        debug_pio_state();
+        // Timer::after(Duration::from_millis(16)).await; // ~60 FPS animation
+        // debug_dma_status();
+        // debug_pio_state();
 
         // Increment frame counter
         frame_counter = frame_counter.wrapping_add(1);
