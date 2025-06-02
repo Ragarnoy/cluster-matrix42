@@ -184,8 +184,8 @@ impl ClusterRenderer {
         }
 
         // Draw zone separators (vertical lines between zones)
-        for i in 0..zones.len().saturating_sub(1) {
-            let gap_x = zones[i].end_col + 1;
+        for zone in zones.iter().take(zones.len().saturating_sub(1)) {
+            let gap_x = zone.end_col + 1;
             let x = offset_x + (gap_x as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32)
                 - (visual::ZONE_GAP / 2) as i32;
 

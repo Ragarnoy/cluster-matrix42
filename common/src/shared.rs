@@ -138,8 +138,8 @@ pub fn set_motd(motd: &str) {
         MOTD_CHARS[i].store(ch, Ordering::Relaxed);
     }
     // Clear remaining
-    for i in motd.len()..64 {
-        MOTD_CHARS[i].store(0, Ordering::Relaxed);
+    for motd_char in MOTD_CHARS.iter().skip(motd.len()) {
+        motd_char.store(0, Ordering::Relaxed);
     }
 }
 

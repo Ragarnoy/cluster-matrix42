@@ -102,8 +102,13 @@ fn main() {
         let seat_count = shared_cluster.seat_count.load(Ordering::Relaxed) as usize;
 
         // Update local seat array from shared state
-        for i in 0..seat_count.min(CLUSTER_SEATS) {
-            let (state, seat_type, zone) = shared_cluster.seats[i].read();
+        for (i, seat) in shared_cluster
+            .seats
+            .iter()
+            .take(seat_count.min(CLUSTER_SEATS))
+            .enumerate()
+        {
+            let (state, seat_type, zone) = seat.read();
             unsafe {
                 SEATS[i] = Seat {
                     state: SeatState::from_u8(state),
