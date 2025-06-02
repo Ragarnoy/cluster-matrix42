@@ -808,14 +808,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hub75-driver"
-version = "0.1.0"
-dependencies = [
- "embedded-graphics-core",
- "embedded-hal 1.0.0",
-]
-
-[[package]]
 name = "hub75-rp2350-driver"
 version = "0.1.0"
 dependencies = [

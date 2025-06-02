@@ -2,7 +2,7 @@
 resolver = "3"
 members = [ "common",
     "embd-tests",
-    "hub75-driver",
+#    "hub75-driver",
     "hub75-rp2350-driver",
     "simulator"
 ]
@@ -22,7 +22,6 @@ lto = true
 hub75-rp2350-driver = { path = "hub75-rp2350-driver" }
 
 # Embedded dependencies
-embedded-hal = { version = "1.0" }
 embedded-graphics-core = "0.4"
 embedded-graphics = "0.8.0"
 
