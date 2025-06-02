@@ -72,6 +72,12 @@ impl<'d> Hub75StateMachines<'d> {
         let lat_pio_pin = common.make_pio_pin(lat_pin);
         let oe_pio_pin = common.make_pio_pin(oe_pin);
 
+        // IRQ usage for Hub75 PIO state machines:
+        // - IRQ 4: Data SM signals row SM when line is complete
+        // - IRQ 5: Row SM signals data SM to start next line
+        // - IRQ 6: Row SM signals OE SM to start timing
+        // - IRQ 7: OE SM signals row SM that timing is complete
+
         // Setup Data State Machine (SM0)
         Self::setup_data_sm(&mut common, &mut sm0, &data_pins, &clk_pio_pin);
 
