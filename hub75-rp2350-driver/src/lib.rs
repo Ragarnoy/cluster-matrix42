@@ -270,10 +270,6 @@ impl<'d> Hub75<'d> {
         let data_fifo_addr = pio0.txf(0).as_ptr() as u32; // TX FIFO for SM0
         let oe_fifo_addr = pio0.txf(2).as_ptr() as u32; // TX FIFO for SM2
 
-        // Initialize memory pointers to point to actual data
-        self.memory.fb_ptr = self.memory.fb0.as_mut_ptr();
-        self.memory.delay_ptr = self.memory.delays.as_mut_ptr();
-
         let mut ch0_ctrl = CtrlTrig(0);
         ch0_ctrl.set_incr_read(true);
         ch0_ctrl.set_incr_write(false);
@@ -343,6 +339,8 @@ impl<'d> Hub75<'d> {
         // Channel 3: Reset channel 2's read address
         dma.ch(3).al1_ctrl().write_value(ch3_ctrl.0);
 
+        // DMA channel 3 needs to read the current value of delay_ptr to reset channel 2's read address
+        /// Safety: delay_ptr is part of 'static memory and won't move. The DMA will only read this address.
         let delay_ptr_addr = &self.memory.delay_ptr as *const _ as u32;
         dma.ch(3).read_addr().write_value(delay_ptr_addr);
         dma.ch(3)
