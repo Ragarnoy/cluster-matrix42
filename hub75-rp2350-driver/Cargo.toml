@@ -8,11 +8,3 @@ embedded-graphics-core = { workspace = true}
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
 fixed-macro = "1.2.0"
 defmt = { workspace = true }
-
-[features]
-default = ["mapping-brg"]
-mapping-brg = []  # Blue→Red, Red→Green, Green→Blue
-mapping-gbr = []  # Green→Red, Blue→Green, Red→Blue
-mapping-bgr = []  # Blue→Red, Green→Green, Red→Blue
-mapping-rbg = []  # Red→Red, Blue→Green, Green→Blue
-mapping-grb = []  # Green→Red, Red→Green, Blue→Blue
