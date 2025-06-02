@@ -302,7 +302,8 @@ impl<'d> Hub75<'d> {
         // Channel 1: Reset channel 0's read address
         dma.ch(1).al1_ctrl().write_value(ch1_ctrl.0);
 
-        // This should read the pointer to fb_ptr, not fb_ptr itself
+        // DMA channel 1 needs to read the current value of fb_ptr to reset channel 0's read address
+        // Safety: fb_ptr is part of 'static memory and won't move. The DMA will only read this address.
         let fb_ptr_addr = &self.memory.fb_ptr as *const _ as u32;
         dma.ch(1).read_addr().write_value(fb_ptr_addr);
         dma.ch(1)
