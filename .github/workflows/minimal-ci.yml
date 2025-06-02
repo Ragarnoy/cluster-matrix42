@@ -1,0 +1,85 @@
+# Minimal CI for embedded Rust project
+# This is a simplified version focusing only on essential checks
+
+name: Minimal CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: thumbv8m.main-none-eabihf
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Format
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      # Clippy
+      - name: Clippy
+        run: |
+          cargo clippy -p simulator -- -D warnings
+          cargo clippy -p common --all-features -- -D warnings
+          cargo clippy -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p embd-tests --target thumbv8m.main-none-eabihf -- -D warnings
+
+      # Build
+      - name: Build all
+        run: |
+          cargo build -p simulator --release
+          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release
+
+      # Test
+      - name: Run tests
+        run: |
+          cargo test -p simulator
+          cargo test -p common --features std
+
+      # Size check (only on PR)
+      - name: Check binary size
+        if: github.event_name == 'pull_request'
+        run: |
+          cargo install cargo-binutils
+          rustup component add llvm-tools
+          
+          # Build current version
+          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --bin basic_panel
+          cargo size --release --bin basic_panel -p embd-tests --target thumbv8m.main-none-eabihf -- -A > pr-size.txt
+          
+          # Build base version
+          git checkout ${{ github.event.pull_request.base.sha }}
+          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --bin basic_panel
+          cargo size --release --bin basic_panel -p embd-tests --target thumbv8m.main-none-eabihf -- -A > base-size.txt
+          
+          # Compare
+          BASE_SIZE=$(grep "Total" base-size.txt | awk '{print $2}' || echo "0")
+          PR_SIZE=$(grep "Total" pr-size.txt | awk '{print $2}' || echo "0")
+          
+          if [ "$BASE_SIZE" != "0" ] && [ "$PR_SIZE" != "0" ]; then
+            DIFF=$((PR_SIZE - BASE_SIZE))
+            PERCENT=$((DIFF * 100 / BASE_SIZE))
+            echo "Size change: $DIFF bytes ($PERCENT%)"
+          
+            if [ $PERCENT -gt 15 ]; then
+              echo "ERROR: Binary size increased by more than 15%!"
+              exit 1
+            fi
+          fi*
