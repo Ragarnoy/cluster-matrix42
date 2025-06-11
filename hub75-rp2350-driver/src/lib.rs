@@ -218,7 +218,7 @@ impl<'d> Hub75<'d> {
 
         for y in 0..DISPLAY_HEIGHT {
             for x in 0..DISPLAY_WIDTH {
-                let color = match (x / 16, y / 16) {
+                let color = match (x / (DISPLAY_WIDTH / 4), y / (DISPLAY_HEIGHT / 4)) {
                     (0, 0) => Rgb565::RED,
                     (1, 0) => Rgb565::GREEN,
                     (2, 0) => Rgb565::BLUE,
