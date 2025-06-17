@@ -49,7 +49,7 @@ pub use dma::{DmaStatus, Hub75DmaChannels};
 use embassy_rp::peripherals::{DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3, PIO0};
 use embassy_rp::pio::{InterruptHandler, PioPin};
 use embassy_rp::{Peri, bind_interrupts};
-use embedded_graphics_core::prelude::RgbColor;
+use embedded_graphics_core::prelude::{Point, RgbColor};
 use embedded_graphics_core::{
     Pixel,
     draw_target::DrawTarget,
@@ -372,11 +372,20 @@ impl<'d> DrawTarget for Hub75<'d> {
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
-        for Pixel(point, color) in pixels {
+        for Pixel(mut point, color) in pixels {
+            coord_transfer(&mut point);
             if point.x >= 0 && point.y >= 0 {
                 self.set_pixel(point.x as usize, point.y as usize, color);
             }
         }
         Ok(())
+    }
+}
+
+fn coord_transfer(point: &mut Point) {
+    if point.y < 64 {
+        point.x += 128
+    } else {
+        point.y -= 64;
     }
 }

@@ -1,7 +1,7 @@
 //! Configuration constants and types for the Hub75 driver
 
 /// Display dimensions - must match your physical panel
-pub const DISPLAY_WIDTH: usize = 64;
+pub const DISPLAY_WIDTH: usize = 256;
 pub const DISPLAY_HEIGHT: usize = 64;
 
 /// Number of rows that need to be addressed (dual-scan panels use half)
@@ -30,14 +30,9 @@ pub const fn compute_bcm_delays() -> [u32; COLOR_BITS] {
 pub mod pio_clocks {
     use fixed_macro::__fixed::types::U24F8;
 
-    /// Data state machine clock divider (2.0)
-    pub const DATA_SM_CLOCK_DIV: U24F8 = U24F8::from_bits(512); // 2.0 * 256
-
-    /// Row address state machine clock divider (1.5)
-    pub const ROW_SM_CLOCK_DIV: U24F8 = U24F8::from_bits(384); // 1.5 * 256
-
-    /// Output enable state machine clock divider (1.5)
-    pub const OE_SM_CLOCK_DIV: U24F8 = U24F8::from_bits(384); // 1.5 * 256
+    pub const DATA_SM_CLOCK_DIV: U24F8 = U24F8::lit("3.0");
+    pub const ROW_SM_CLOCK_DIV: U24F8 = U24F8::lit("2.0");
+    pub const OE_SM_CLOCK_DIV: U24F8 = U24F8::lit("2.0");
 }
 
 /// DMA DREQ (Data Request) values for PIO0
