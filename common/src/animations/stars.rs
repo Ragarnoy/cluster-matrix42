@@ -164,7 +164,7 @@ where
     let far_y = center.y + (libm::sin(f64::from(far_angle)) * 58.0) as i32;
 
     // Only draw if within bounds
-    if far_x >= 0 && far_x < 128 && far_y >= 0 && far_y < 128 {
+    if (0..128).contains(&far_x) && (0..128).contains(&far_y) {
         Circle::new(Point::new(far_x - 3, far_y - 3), 6)
             .into_styled(PrimitiveStyle::with_fill(Rgb565::CSS_PURPLE))
             .draw(display)?;
