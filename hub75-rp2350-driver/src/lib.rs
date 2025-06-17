@@ -374,7 +374,7 @@ impl<'d> DrawTarget for Hub75<'d> {
     {
         for Pixel(mut point, color) in pixels {
             coord_transfer(&mut point);
-            if point.x >= 0 && point.y >= 0 {
+            if point.x >= 0 && point.y >= 0 && point.y < 64 && point.x < 256 {
                 self.set_pixel(point.x as usize, point.y as usize, color);
             }
         }
