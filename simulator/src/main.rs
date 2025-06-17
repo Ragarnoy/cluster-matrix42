@@ -3,13 +3,13 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use std::{thread, time::Duration};
-
+use common::animations;
 // Import our animation module
 use common::animations::stars::draw_animation_frame;
 
 fn main() -> Result<(), std::convert::Infallible> {
-    // Create a new simulator display that matches our panel size (64x64)
-    let mut display = SimulatorDisplay::<Rgb565>::new(Size::new(64, 64));
+    // Create a new simulator display that matches our panel size (128x128)
+    let mut display = SimulatorDisplay::<Rgb565>::new(Size::new(128, 128));
 
     // Configure the simulator window with a pixel scale of 8 for better visibility
     let output_settings = OutputSettingsBuilder::new()
@@ -25,7 +25,8 @@ fn main() -> Result<(), std::convert::Infallible> {
 
     'running: loop {
         // Draw the current frame of the animation
-        draw_animation_frame(&mut display, frame)?;
+        //draw_animation_frame(&mut display, frame)?;
+        animations::fortytwo::draw_animation_frame(&mut display, frame).unwrap();
 
         // Update the window with the contents of the display
         window.update(&display);

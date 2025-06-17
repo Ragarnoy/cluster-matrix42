@@ -176,6 +176,6 @@ where
         rotate_y(v, t);
     }
 
-    draw_fortytwo(display, vertices, 48., 96., 32, 32)?;
+    draw_fortytwo(display, vertices, 48., 192., 64, 64)?;
     Ok(())
 }
