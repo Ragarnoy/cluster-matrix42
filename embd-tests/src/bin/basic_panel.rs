@@ -4,6 +4,7 @@
 #![no_main]
 
 use common::animations;
+use common::animations::stars::draw_animation_frame;
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
@@ -154,10 +155,12 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         let anim_start = embassy_time::Instant::now();
 
         // Draw the current animation frame into the inactive buffer
-        animations::quadrant::draw_animation_frame(&mut display, frame_counter).unwrap();
+        //animations::quadrant::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
 
         // Alternative animations to try:
-        // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
+        animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::fortytwo_rainbow::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_pattern();
 
         let anim_time = anim_start.elapsed();

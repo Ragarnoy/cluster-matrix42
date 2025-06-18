@@ -23,7 +23,7 @@ fn main() -> Result<(), std::convert::Infallible> {
 
     'running: loop {
         // Draw the current frame of the animation
-        //animations::starts::draw_animation_frame(&mut display, frame)?;
+        // animations::stars::draw_animation_frame(&mut display, frame)?;
         animations::fortytwo::draw_animation_frame(&mut display, frame).unwrap();
 
         // Update the window with the contents of the display
