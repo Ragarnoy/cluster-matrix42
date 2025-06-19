@@ -159,8 +159,8 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
 
         // Alternative animations to try:
-        animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
-        // animations::fortytwo_rainbow::draw_animation_frame(&mut display, frame_counter).unwrap();
+        animations::arrow::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_pattern();
 
         let anim_time = anim_start.elapsed();

@@ -36,6 +36,30 @@
 
 #![no_std]
 
+#[cfg(not(any(
+    feature = "size_64x32",
+    feature = "size_64x64",
+    feature = "size_128x128"
+)))]
+compile_error!(
+    "A display size feature must be enabled. Choose one of: size_64x32, size_64x64, size_128x128"
+);
+
+#[cfg(not(any(feature = "color_rgb", feature = "color_gbr")))]
+compile_error!("a color order feature should be enabled. Choose one of: color_rgb, color_gbr");
+
+#[cfg(all(feature = "color_rgb", feature = "color_gbr"))]
+compile_error!("Cannot enable both color_rgb and color_gbr");
+
+#[cfg(all(feature = "size_64x32", feature = "size_64x64"))]
+compile_error!("Cannot enable both size_64x32 and size_64x64");
+
+#[cfg(all(feature = "size_64x32", feature = "size_128x128"))]
+compile_error!("Cannot enable both size_64x32 and size_128x128");
+
+#[cfg(all(feature = "size_64x64", feature = "size_128x128"))]
+compile_error!("Cannot enable both size_64x64 and size_128x128");
+
 pub mod config;
 pub mod dma;
 pub mod lut;

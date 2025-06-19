@@ -98,9 +98,24 @@ impl DisplayMemory {
         let shift = if h { 3 } else { 0 };
 
         // CRITICAL: Original color channel mapping (swapped!)
-        let mut c_g: u16 = (((color.r() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
-        let mut c_b: u16 = (((color.g() << 2) as f32) * (brightness as f32 / 255f32)) as u16;
-        let mut c_r: u16 = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+        let mut c_r: u16;
+        let mut c_b: u16;
+        let mut c_g: u16;
+
+        #[cfg(feature = "color_rgb")]
+        {
+            c_r = (((color.r() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+            c_g = (((color.g() << 2) as f32) * (brightness as f32 / 255f32)) as u16;
+            c_b = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+        }
+
+        #[cfg(feature = "color_gbr")]
+        {
+            c_g = (((color.r() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+            c_b = (((color.g() << 2) as f32) * (brightness as f32 / 255f32)) as u16;
+            c_r = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+        }
+
         let base_idx = x + ((y % (DISPLAY_HEIGHT / 2)) * DISPLAY_WIDTH * COLOR_BITS);
 
         c_r = GAMMA8[c_r as usize] as u16;

@@ -1,8 +1,13 @@
 //! Configuration constants and types for the Hub75 driver
 
 /// Display dimensions - must match your physical panel
-pub const DISPLAY_WIDTH: usize = 256;
-pub const DISPLAY_HEIGHT: usize = 64;
+pub const DISPLAY_WIDTH: usize = if cfg!(feature = "size_128x128") {
+    256
+} else {
+    64
+};
+
+pub const DISPLAY_HEIGHT: usize = if cfg!(feature = "size_64x32") { 32 } else { 64 };
 
 /// Number of rows that need to be addressed (dual-scan panels use half)
 pub const ACTIVE_ROWS: usize = DISPLAY_HEIGHT / 2; // 32 rows (requires 5 address bits)
