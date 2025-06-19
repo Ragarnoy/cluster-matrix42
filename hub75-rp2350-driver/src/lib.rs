@@ -8,7 +8,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```no_run
 //! use hub75_rp2350_driver::{Hub75, DisplayMemory};
 //! use embassy_rp::peripherals::*;
 //!
@@ -397,6 +397,7 @@ impl<'d> DrawTarget for Hub75<'d> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(mut point, color) in pixels {
+            #[cfg(feature = "size_128x128")]
             coord_transfer(&mut point);
             if point.x >= 0 && point.y >= 0 && point.y < 64 && point.x < 256 {
                 self.set_pixel(point.x as usize, point.y as usize, color);
