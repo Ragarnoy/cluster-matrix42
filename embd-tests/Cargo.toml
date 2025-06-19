@@ -27,3 +27,8 @@ bench = false
 name = "basic_panel"
 test = false
 bench = false
+
+[features]
+waveshare = ["hub75-rp2350-driver/waveshare_64x32"]
+128 = ["hub75-rp2350-driver/wtf_128x128"]
+64 = ["hub75-rp2350-driver/wtf_64x64"]

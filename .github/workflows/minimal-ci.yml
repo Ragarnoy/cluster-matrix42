@@ -43,14 +43,14 @@ jobs:
         run: |
           cargo clippy -p simulator -- -D warnings
           cargo clippy -p common --all-features -- -D warnings
-          cargo clippy -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf -- -D warnings
-          cargo clippy -p embd-tests --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p hub75-rp2350-driver --features "waveshare" --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p embd-tests --features "waveshare" --target thumbv8m.main-none-eabihf -- -D warnings
 
       # Build
       - name: Build all
         run: |
           cargo build -p simulator --release
-          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release
+          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --features "waveshare"
 
       # Test
       - name: Run tests

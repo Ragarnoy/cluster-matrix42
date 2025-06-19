@@ -8,3 +8,13 @@ embedded-graphics-core = { workspace = true}
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
 fixed-macro = "1.2.0"
 defmt = { workspace = true }
+
+[features]
+size_128x128 = []
+size_64x64 = []
+size_64x32 = []
+color_rgb = []
+color_gbr = []
+waveshare_64x32 = ["size_64x32", "color_rgb"]
+wtf_128x128 = ["size_128x128", "color_gbr"]
+wtf_64x64 = ["size_64x64", "color_gbr"]

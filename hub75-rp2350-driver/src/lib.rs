@@ -8,7 +8,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```no_run
 //! use hub75_rp2350_driver::{Hub75, DisplayMemory};
 //! use embassy_rp::peripherals::*;
 //!
@@ -35,6 +35,30 @@
 //! ```
 
 #![no_std]
+
+#[cfg(not(any(
+    feature = "size_64x32",
+    feature = "size_64x64",
+    feature = "size_128x128"
+)))]
+compile_error!(
+    "A display size feature must be enabled. Choose one of: size_64x32, size_64x64, size_128x128"
+);
+
+#[cfg(not(any(feature = "color_rgb", feature = "color_gbr")))]
+compile_error!("a color order feature should be enabled. Choose one of: color_rgb, color_gbr");
+
+#[cfg(all(feature = "color_rgb", feature = "color_gbr"))]
+compile_error!("Cannot enable both color_rgb and color_gbr");
+
+#[cfg(all(feature = "size_64x32", feature = "size_64x64"))]
+compile_error!("Cannot enable both size_64x32 and size_64x64");
+
+#[cfg(all(feature = "size_64x32", feature = "size_128x128"))]
+compile_error!("Cannot enable both size_64x32 and size_128x128");
+
+#[cfg(all(feature = "size_64x64", feature = "size_128x128"))]
+compile_error!("Cannot enable both size_64x64 and size_128x128");
 
 pub mod config;
 pub mod dma;
@@ -373,6 +397,7 @@ impl<'d> DrawTarget for Hub75<'d> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(mut point, color) in pixels {
+            #[cfg(feature = "size_128x128")]
             coord_transfer(&mut point);
             if point.x >= 0 && point.y >= 0 && point.y < 64 && point.x < 256 {
                 self.set_pixel(point.x as usize, point.y as usize, color);
