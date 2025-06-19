@@ -57,11 +57,6 @@ fn clamp_f32(value: f32, min: f32, max: f32) -> f32 {
     }
 }
 
-// Manual absolute value function
-fn abs_f32(x: f32) -> f32 {
-    if x < 0.0 { -x } else { x }
-}
-
 // Generate a color wheel
 struct ColorWheel {
     saturation: f32,
