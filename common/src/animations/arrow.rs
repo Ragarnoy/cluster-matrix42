@@ -18,12 +18,12 @@ const PATTERN_WIDTH: i32 = NUM_CHEVRONS as i32 * (CHEVRON_WIDTH + CHEVRON_SPACIN
 
 /// Effective display dimensions (accounting for coordinate transformation)
 const DISPLAY_WIDTH: i32 = 128;
-const DISPLAY_HEIGHT: i32 = 64;
+const DISPLAY_HEIGHT: i32 = 32;
 
 /// Animation parameters
 const ARROW_SPEED: i32 = 1; // pixels per frame
 const FRAMES_PER_MOVE: u32 = 2; // Move every N frames for smooth animation
-const LOOP_CYCLE: i32 = DISPLAY_WIDTH + PATTERN_WIDTH + 40; // Total frames for one complete cycle
+const LOOP_CYCLE: i32 = DISPLAY_WIDTH + PATTERN_WIDTH - 60; // Total frames for one complete cycle
 
 /// Arrow colors (bright for LED matrix)
 const CHEVRON_COLOR: Rgb565 = Rgb565::new(0, 31, 0); // Bright green
@@ -104,9 +104,7 @@ where
     // Calculate pattern position
     let pattern_x = get_pattern_x_position(frame);
 
-    // Use Y=78 as user discovered this works with the coordinate transformation
-    // The Hub75 driver transforms this to y=78-64=14 on the upper panel
-    let arrow_y = 78;
+    let arrow_y = DISPLAY_HEIGHT / 2 - 1;
 
     // Draw the main chevron pattern
     draw_chevron_pattern(display, pattern_x, arrow_y, CHEVRON_COLOR)?;
