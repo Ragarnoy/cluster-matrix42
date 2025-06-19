@@ -7,7 +7,7 @@ use std::{thread, time::Duration};
 
 fn main() -> Result<(), std::convert::Infallible> {
     // Create a new simulator display that matches our panel size (128x128)
-    let mut display = SimulatorDisplay::<Rgb565>::new(Size::new(128, 128));
+    let mut display = SimulatorDisplay::<Rgb565>::new(Size::new(64, 32));
 
     // Configure the simulator window with a pixel scale of 8 for better visibility
     let output_settings = OutputSettingsBuilder::new()
@@ -24,7 +24,8 @@ fn main() -> Result<(), std::convert::Infallible> {
     'running: loop {
         // Draw the current frame of the animation
         // animations::stars::draw_animation_frame(&mut display, frame)?;
-        animations::fortytwo::draw_animation_frame(&mut display, frame).unwrap();
+        // animations::fortytwo::draw_animation_frame(&mut display, frame).unwrap();
+        animations::arrow::draw_animation_frame(&mut display, frame).unwrap();
 
         // Update the window with the contents of the display
         window.update(&display);
@@ -40,7 +41,7 @@ fn main() -> Result<(), std::convert::Infallible> {
         frame = frame.wrapping_add(1);
 
         // Control animation speed (roughly 80 FPS)
-        thread::sleep(Duration::from_millis(16));
+        // thread::sleep(Duration::from_millis(16));
     }
 
     Ok(())

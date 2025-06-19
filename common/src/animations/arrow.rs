@@ -8,6 +8,7 @@ use embedded_graphics::{
     prelude::*,
     primitives::{PrimitiveStyle, Triangle},
 };
+use crate::utilities::color::*;
 
 /// Chevron dimensions and styling constants
 const CHEVRON_WIDTH: i32 = 20;
@@ -28,6 +29,7 @@ const LOOP_CYCLE: i32 = DISPLAY_WIDTH + PATTERN_WIDTH - 60; // Total frames for 
 /// Arrow colors (bright for LED matrix)
 const CHEVRON_COLOR: Rgb565 = Rgb565::new(0, 31, 0); // Bright green
 const BACKGROUND_COLOR: Rgb565 = Rgb565::BLACK;
+
 
 /// Calculate the pattern's X position based on the current frame
 fn get_pattern_x_position(frame: u32) -> i32 {
@@ -106,7 +108,10 @@ where
 
     let arrow_y = DISPLAY_HEIGHT / 2 - 1;
 
+    let wheel = ColorWheel::new(1., 1.);
+    let color = wheel.get_color_at_hue((frame / 2) as f32 % 360.);
+
     // Draw the main chevron pattern
-    draw_chevron_pattern(display, pattern_x, arrow_y, CHEVRON_COLOR)?;
+    draw_chevron_pattern(display, pattern_x, arrow_y, color)?;
     Ok(())
 }

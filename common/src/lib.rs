@@ -9,3 +9,4 @@ pub mod animations;
 pub mod constants;
 pub mod shared;
 pub mod visualization;
+pub mod utilities;
