@@ -3,7 +3,6 @@ use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use std::{thread, time::Duration};
 
 fn main() -> Result<(), std::convert::Infallible> {
     // Create a new simulator display that matches our panel size (128x128)
