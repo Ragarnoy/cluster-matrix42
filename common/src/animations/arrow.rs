@@ -3,12 +3,12 @@
 //! Creates a scrolling chevron pattern that moves from left to right and loops back.
 //! Designed for the 256x64 Hub75 display with coordinate transformation.
 
+use crate::utilities::color::*;
 use embedded_graphics::{
     pixelcolor::Rgb565,
     prelude::*,
     primitives::{PrimitiveStyle, Triangle},
 };
-use crate::utilities::color::*;
 
 /// Chevron dimensions and styling constants
 const CHEVRON_WIDTH: i32 = 20;
@@ -19,7 +19,7 @@ const PATTERN_WIDTH: i32 = NUM_CHEVRONS as i32 * (CHEVRON_WIDTH + CHEVRON_SPACIN
 
 /// Effective display dimensions (accounting for coordinate transformation)
 const DISPLAY_WIDTH: i32 = 128;
-const DISPLAY_HEIGHT: i32 = 32;
+const DISPLAY_HEIGHT: i32 = 64;
 
 /// Animation parameters
 const ARROW_SPEED: i32 = 1; // pixels per frame
@@ -27,9 +27,7 @@ const FRAMES_PER_MOVE: u32 = 2; // Move every N frames for smooth animation
 const LOOP_CYCLE: i32 = DISPLAY_WIDTH + PATTERN_WIDTH - 60; // Total frames for one complete cycle
 
 /// Arrow colors (bright for LED matrix)
-const CHEVRON_COLOR: Rgb565 = Rgb565::new(0, 31, 0); // Bright green
 const BACKGROUND_COLOR: Rgb565 = Rgb565::BLACK;
-
 
 /// Calculate the pattern's X position based on the current frame
 fn get_pattern_x_position(frame: u32) -> i32 {

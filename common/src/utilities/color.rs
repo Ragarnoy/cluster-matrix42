@@ -1,7 +1,4 @@
-use embedded_graphics::{
-    pixelcolor::Rgb565,
-    prelude::*,
-};
+use embedded_graphics::pixelcolor::Rgb565;
 
 // HSV to RGB conversion without std library
 fn hsv_to_rgb(h: f32, s: f32, v: f32) -> [f32; 3] {
