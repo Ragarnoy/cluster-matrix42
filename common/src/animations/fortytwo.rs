@@ -1,3 +1,4 @@
+use crate::utilities::color::*;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::{
@@ -5,8 +6,6 @@ use embedded_graphics::{
     prelude::{DrawTarget, Drawable, Point, Primitive, RgbColor},
     primitives::{PrimitiveStyle, Triangle},
 };
-use crate::utilities::color::*;
-
 
 fn project(v: Vec3, d: f32, scale: f32) -> Vec3 {
     let denominator = v.z + d;
