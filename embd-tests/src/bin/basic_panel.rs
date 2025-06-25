@@ -4,7 +4,6 @@
 #![no_main]
 
 use common::animations;
-use common::animations::stars::draw_animation_frame;
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
