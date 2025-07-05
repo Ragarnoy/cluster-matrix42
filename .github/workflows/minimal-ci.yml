@@ -29,15 +29,11 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Check core packages
-        run: >
+        run: |
           cargo check -p graphics-common
-
           cargo check -p cluster-core
-
           cargo check -p cluster-matrix
-
           cargo check -p simulator
-
           cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf
           --features "wtf_128x128"
 
