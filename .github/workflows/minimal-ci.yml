@@ -71,8 +71,8 @@ jobs:
           
       - name: Build - Embedded packages
         run: |
-          cargo build -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --release --features "waveshare_64x32"
-          cargo build -p basic-panel --target thumbv8m.main-none-eabihf --release --features "waveshare"
+          cargo build -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --release --features "wtf_128x128"
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf --release --features "128"
 
       # Test
       - name: Run tests

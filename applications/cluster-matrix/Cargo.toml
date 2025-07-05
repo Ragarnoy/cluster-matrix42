@@ -6,9 +6,6 @@ edition = "2024"
 [dependencies]
 graphics-common = { path = "../../graphics-common" }
 cluster-core = { path = "../../cluster-core" }
-embedded-graphics = { workspace = true }
-libm = { workspace = true }
-heapless = { workspace = true }
 
 [features]
 default = []

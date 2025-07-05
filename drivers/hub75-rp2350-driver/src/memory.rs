@@ -3,6 +3,7 @@
 use crate::config::*;
 use crate::lut::GAMMA8;
 use embedded_graphics_core::pixelcolor::Rgb565;
+use embedded_graphics_core::prelude::RgbColor;
 
 /// Double-buffered framebuffer with hardware-optimized layout
 ///

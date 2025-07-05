@@ -161,10 +161,7 @@ name = "cluster-core"
 version = "0.1.0"
 dependencies = [
  "embedded-graphics",
- "embedded-graphics-core",
- "graphics-common",
  "heapless",
- "libm",
 ]
 
 [[package]]
@@ -172,10 +169,7 @@ name = "cluster-matrix"
 version = "0.1.0"
 dependencies = [
  "cluster-core",
- "embedded-graphics",
  "graphics-common",
- "heapless",
- "libm",
 ]
 
 [[package]]
