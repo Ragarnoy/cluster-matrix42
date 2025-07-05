@@ -523,7 +523,7 @@ pub mod builder {
             self.attributes = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for attributes: {}", _e).into()
+                    format!("error converting supplied value for attributes: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -542,7 +542,7 @@ pub mod builder {
             self.id = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for id: {}", _e).into()
+                    format!("error converting supplied value for id: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -560,7 +560,7 @@ pub mod builder {
             self.name = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for name: {}", _e).into()
+                    format!("error converting supplied value for name: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -578,7 +578,7 @@ pub mod builder {
             self.zones = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for zones: {}", _e).into()
+                    format!("error converting supplied value for zones: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -694,7 +694,7 @@ pub mod builder {
             self.f0 = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for f0: {}", _e).into()
+                    format!("error converting supplied value for f0: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -712,7 +712,7 @@ pub mod builder {
             self.f1 = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for f1: {}", _e).into()
+                    format!("error converting supplied value for f1: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -730,7 +730,7 @@ pub mod builder {
             self.f1b = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for f1b: {}", _e).into()
+                    format!("error converting supplied value for f1b: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -748,7 +748,7 @@ pub mod builder {
             self.f2 = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for f2: {}", _e).into()
+                    format!("error converting supplied value for f2: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -766,7 +766,7 @@ pub mod builder {
             self.f4 = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for f4: {}", _e).into()
+                    format!("error converting supplied value for f4: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -784,7 +784,7 @@ pub mod builder {
             self.f6 = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for f6: {}", _e).into()
+                    format!("error converting supplied value for f6: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -916,7 +916,7 @@ pub mod builder {
             self.attributes = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for attributes: {}", _e).into()
+                    format!("error converting supplied value for attributes: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -935,7 +935,7 @@ pub mod builder {
             self.name = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for name: {}", _e).into()
+                    format!("error converting supplied value for name: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -953,7 +953,7 @@ pub mod builder {
             self.seats = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for seats: {}", _e).into()
+                    format!("error converting supplied value for seats: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -971,7 +971,7 @@ pub mod builder {
             self.zones = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for zones: {}", _e).into()
+                    format!("error converting supplied value for zones: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1081,7 +1081,7 @@ pub mod builder {
             self.kind = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for kind: {}", _e).into()
+                    format!("error converting supplied value for kind: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1099,7 +1099,7 @@ pub mod builder {
             self.status = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for status: {}", _e).into()
+                    format!("error converting supplied value for status: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1117,7 +1117,7 @@ pub mod builder {
             self.x = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for x: {}", _e).into()
+                    format!("error converting supplied value for x: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1135,7 +1135,7 @@ pub mod builder {
             self.y = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for y: {}", _e).into()
+                    format!("error converting supplied value for y: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1247,7 +1247,7 @@ pub mod builder {
             self.attributes = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for attributes: {}", _e).into()
+                    format!("error converting supplied value for attributes: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1266,7 +1266,7 @@ pub mod builder {
             self.name = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for name: {}", _e).into()
+                    format!("error converting supplied value for name: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1284,7 +1284,7 @@ pub mod builder {
             self.x = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for x: {}", _e).into()
+                    format!("error converting supplied value for x: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
@@ -1302,7 +1302,7 @@ pub mod builder {
             self.y = value.try_into().map_err(|_e| {
                 #[cfg(feature = "std")]
                 {
-                    format!("error converting supplied value for y: {}", _e).into()
+                    format!("error converting supplied value for y: {_e}")
                 }
                 #[cfg(not(feature = "std"))]
                 {
