@@ -94,7 +94,7 @@ where
 
     // Frame counter
     let mut frame_text = heapless::String::<16>::new();
-    write!(&mut frame_text, "F:{}", frame).unwrap();
+    write!(&mut frame_text, "F:{frame}").unwrap();
     Text::new(&frame_text, Point::new(4, 10), text_style).draw(display)?;
 
     Ok(())

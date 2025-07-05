@@ -1,6 +1,6 @@
-use common::shared::types::{Floor, Zone};
-use common::shared::{CURRENT_CLUSTER_INDEX, SHARED_CLUSTERS, get_motd, set_motd};
-use common::visualization::{
+use cluster_matrix::shared::types::{Floor, Zone};
+use cluster_matrix::shared::{CURRENT_CLUSTER_INDEX, SHARED_CLUSTERS, get_motd, set_motd};
+use cluster_matrix::visualization::{
     Cluster, ClusterRenderer, GridLayout, Seat, SeatState, SeatType, presets,
 };
 use embedded_graphics::geometry::Size;

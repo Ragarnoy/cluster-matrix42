@@ -1,11 +1,11 @@
 [package]
-name = "embd-tests"
+name = "basic-panel"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 hub75-rp2350-driver = { workspace = true }
-common = { path = "../common" }
+cluster-matrix = { path = "../../applications/cluster-matrix" }
 
 # Logging dependencies
 defmt = { version = "1.0.1" }

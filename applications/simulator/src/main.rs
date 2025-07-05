@@ -1,4 +1,4 @@
-use common::animations;
+use cluster_matrix::animations;
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,

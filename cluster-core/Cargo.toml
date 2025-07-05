@@ -1,0 +1,12 @@
+[package]
+name = "cluster-core"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = []
+std = []
+
+[dependencies]
+embedded-graphics = { workspace = true }
+heapless = { workspace = true }

@@ -2,3 +2,4 @@
 /.vscode
 **/target
 rustc-ice*
+/.claude

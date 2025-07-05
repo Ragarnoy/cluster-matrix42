@@ -2,10 +2,10 @@
 
 use core::convert::Infallible;
 use embedded_graphics_core::{
-    Pixel,
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Size},
     pixelcolor::{Rgb565, RgbColor},
+    Pixel,
 };
 use embedded_hal::{delay::DelayNs, digital::OutputPin};
 

@@ -1,21 +1,16 @@
-# Minimal CI for embedded Rust project
-# This is a simplified version focusing only on essential checks
-
+---
 name: Minimal CI
-
 on:
   push:
-    branches: [main]
-  pull_request:
-
+    branches:
+      - master
+  pull_request: {}
 env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
-
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -23,66 +18,98 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Install SDL2 dependencies
-        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
-
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev
+          libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
           targets: thumbv8m.main-none-eabihf
-
       - uses: Swatinem/rust-cache@v2
-
-      # Format
       - name: Check formatting
         run: cargo fmt --all -- --check
+      - name: Check core packages
+        run: |
+          cargo check -p graphics-common
+          cargo check -p cluster-core
+          cargo check -p cluster-matrix
+          cargo check -p simulator
+          cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --features "wtf_128x128"
 
-      # Clippy
-      - name: Clippy
+          cargo check -p basic-panel --target thumbv8m.main-none-eabihf --features "128"
+      - name: Clippy - Desktop/Simulator packages
         run: |
           cargo clippy -p simulator -- -D warnings
-          cargo clippy -p common --all-features -- -D warnings
-          cargo clippy -p hub75-rp2350-driver --features "waveshare_64x32" --target thumbv8m.main-none-eabihf -- -D warnings
-          cargo clippy -p embd-tests --features "waveshare" --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p graphics-common --all-features -- -D warnings
+          cargo clippy -p cluster-core --all-features -- -D warnings
+          cargo clippy -p cluster-matrix --all-features -- -D warnings
+      - name: Clippy - Embedded packages
+        run: >
+          cargo clippy -p hub75-rp2350-driver --features "wtf_128x128" --target
+          thumbv8m.main-none-eabihf -- -D warnings
 
-      # Build
-      - name: Build all
+          cargo clippy -p basic-panel --features "128"
+          --target thumbv8m.main-none-eabihf -- -D warnings
+      - name: Build - Desktop/Simulator packages
         run: |
+          cargo build -p graphics-common --release
+          cargo build -p cluster-core --release
+          cargo build -p cluster-matrix --release
           cargo build -p simulator --release
-          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --features "waveshare"
+      - name: Build - Embedded packages
+        run: >
+          cargo build -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf
+          --release --features "wtf_128x128"
 
-      # Test
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf
+          --release --features "128"
       - name: Run tests
         run: |
           cargo test -p simulator
-          cargo test -p common --features std
-
-      # Size check (only on PR)
+          cargo test -p graphics-common --features std
+          cargo test -p cluster-core --features std
+          cargo test -p cluster-matrix --features std
       - name: Check binary size
         if: github.event_name == 'pull_request'
-        run: |
+        run: >
           cargo install cargo-binutils
+
           rustup component add llvm-tools
-          
+
+
           # Build current version
-          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --bin basic_panel
-          cargo size --release --bin basic_panel -p embd-tests --target thumbv8m.main-none-eabihf -- -A > pr-size.txt
-          
+
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf
+          --release --bin basic_panel --features "128"
+
+          cargo size --release --bin basic_panel -p basic-panel
+          --target thumbv8m.main-none-eabihf
+          --features "128" -- -A > pr-size.txt
+
+
           # Build base version
+
           git checkout ${{ github.event.pull_request.base.sha }}
-          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --bin basic_panel
-          cargo size --release --bin basic_panel -p embd-tests --target thumbv8m.main-none-eabihf -- -A > base-size.txt
-          
+
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf
+          --release --bin basic_panel --features "128"
+
+          cargo size --release --bin basic_panel -p basic-panel
+          --target thumbv8m.main-none-eabihf
+          --features "128" -- -A > base-size.txt
+
+
           # Compare
+
           BASE_SIZE=$(grep "Total" base-size.txt | awk '{print $2}' || echo "0")
+
           PR_SIZE=$(grep "Total" pr-size.txt | awk '{print $2}' || echo "0")
-          
+
+
           if [ "$BASE_SIZE" != "0" ] && [ "$PR_SIZE" != "0" ]; then
             DIFF=$((PR_SIZE - BASE_SIZE))
             PERCENT=$((DIFF * 100 / BASE_SIZE))
             echo "Size change: $DIFF bytes ($PERCENT%)"
-          
             if [ $PERCENT -gt 15 ]; then
               echo "ERROR: Binary size increased by more than 15%!"
               exit 1
