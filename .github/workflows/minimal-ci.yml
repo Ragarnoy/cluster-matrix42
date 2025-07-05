@@ -39,7 +39,7 @@ jobs:
           cargo check -p simulator
 
           cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf
-          --features "waveshare_64x32"
+          --features "wtf_128x128"
 
           cargo check -p basic-panel --target thumbv8m.main-none-eabihf
           --features "waveshare"
@@ -51,7 +51,7 @@ jobs:
           cargo clippy -p cluster-matrix --all-features -- -D warnings
       - name: Clippy - Embedded packages
         run: >
-          cargo clippy -p hub75-rp2350-driver --features "waveshare_64x32"
+          cargo clippy -p hub75-rp2350-driver --features "wtf_128x128"
           --target thumbv8m.main-none-eabihf -- -D warnings
 
           cargo clippy -p basic-panel --features "waveshare" --target
