@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-  pull_request: null
+  pull_request: {}
 env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
@@ -42,7 +42,7 @@ jobs:
           --features "wtf_128x128"
 
           cargo check -p basic-panel --target thumbv8m.main-none-eabihf
-          --features "waveshare"
+          --features "128"
       - name: Clippy - Desktop/Simulator packages
         run: |
           cargo clippy -p simulator -- -D warnings
@@ -54,7 +54,7 @@ jobs:
           cargo clippy -p hub75-rp2350-driver --features "wtf_128x128"
           --target thumbv8m.main-none-eabihf -- -D warnings
 
-          cargo clippy -p basic-panel --features "waveshare" --target
+          cargo clippy -p basic-panel --features "128" --target
           thumbv8m.main-none-eabihf -- -D warnings
       - name: Build - Desktop/Simulator packages
         run: |
