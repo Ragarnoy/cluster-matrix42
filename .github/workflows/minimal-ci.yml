@@ -34,11 +34,9 @@ jobs:
           cargo check -p cluster-core
           cargo check -p cluster-matrix
           cargo check -p simulator
-          cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf
-          --features "wtf_128x128"
+          cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --features "wtf_128x128"
 
-          cargo check -p basic-panel --target thumbv8m.main-none-eabihf
-          --features "128"
+          cargo check -p basic-panel --target thumbv8m.main-none-eabihf --features "128"
       - name: Clippy - Desktop/Simulator packages
         run: |
           cargo clippy -p simulator -- -D warnings
