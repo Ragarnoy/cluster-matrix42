@@ -41,7 +41,8 @@ jobs:
         run: |
           cargo clippy -p simulator -- -D warnings
           cargo clippy -p graphics-common --all-features -- -D warnings
-          cargo clippy -p cluster-core --all-features -- -D warnings
+          cargo clippy -p cluster-core --no-default-features -- -D warnings
+          cargo clippy -p cluster-core -- -D warnings
           cargo clippy -p cluster-matrix --all-features -- -D warnings
       - name: Clippy - Embedded packages
         run: >
