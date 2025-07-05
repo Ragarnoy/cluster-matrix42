@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 hub75-rp2350-driver = { workspace = true }
-cluster-matrix = { path = "../../applications/cluster-matrix" }
+graphics-common = { workspace = true }
 
 # Logging dependencies
 defmt = { version = "1.0.1" }
