@@ -51,11 +51,11 @@ jobs:
           cargo clippy -p cluster-matrix --all-features -- -D warnings
       - name: Clippy - Embedded packages
         run: >
-          cargo clippy -p hub75-rp2350-driver --features "wtf_128x128"
-          --target thumbv8m.main-none-eabihf -- -D warnings
-
-          cargo clippy -p basic-panel --features "128" --target
+          cargo clippy -p hub75-rp2350-driver --features "wtf_128x128" --target
           thumbv8m.main-none-eabihf -- -D warnings
+
+          cargo clippy -p basic-panel --features "128"
+          --target thumbv8m.main-none-eabihf -- -D warnings
       - name: Build - Desktop/Simulator packages
         run: |
           cargo build -p graphics-common --release
@@ -86,10 +86,11 @@ jobs:
           # Build current version
 
           cargo build -p basic-panel --target thumbv8m.main-none-eabihf
-          --release --bin basic_panel
+          --release --bin basic_panel --features "128"
 
           cargo size --release --bin basic_panel -p basic-panel
-          --target thumbv8m.main-none-eabihf -- -A > pr-size.txt
+          --target thumbv8m.main-none-eabihf
+          --features "128" -- -A > pr-size.txt
 
 
           # Build base version
@@ -97,10 +98,11 @@ jobs:
           git checkout ${{ github.event.pull_request.base.sha }}
 
           cargo build -p basic-panel --target thumbv8m.main-none-eabihf
-          --release --bin basic_panel
+          --release --bin basic_panel --features "128"
 
           cargo size --release --bin basic_panel -p basic-panel
-          --target thumbv8m.main-none-eabihf -- -A > base-size.txt
+          --target thumbv8m.main-none-eabihf
+          --features "128" -- -A > base-size.txt
 
 
           # Compare
@@ -114,7 +116,6 @@ jobs:
             DIFF=$((PR_SIZE - BASE_SIZE))
             PERCENT=$((DIFF * 100 / BASE_SIZE))
             echo "Size change: $DIFF bytes ($PERCENT%)"
-
             if [ $PERCENT -gt 15 ]; then
               echo "ERROR: Binary size increased by more than 15%!"
               exit 1
