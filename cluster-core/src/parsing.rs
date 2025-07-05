@@ -418,8 +418,8 @@ impl Layout {
 pub struct Seat {
     pub kind: Kind,
     pub status: Status,
-    pub x: i64,
-    pub y: i64,
+    pub x: u16,
+    pub y: u16,
 }
 impl From<&Seat> for Seat {
     fn from(value: &Seat) -> Self {
@@ -438,8 +438,8 @@ impl Seat {
 pub struct Zone {
     pub attributes: AttributeVec,
     pub name: ClusterString,
-    pub x: i64,
-    pub y: i64,
+    pub x: u16,
+    pub y: u16,
 }
 
 impl From<&Zone> for Zone {
@@ -1045,8 +1045,8 @@ pub mod builder {
     pub struct Seat {
         kind: Result<Kind, ClusterString>,
         status: Result<Status, ClusterString>,
-        x: Result<i64, ClusterString>,
-        y: Result<i64, ClusterString>,
+        x: Result<u16, ClusterString>,
+        y: Result<u16, ClusterString>,
     }
 
     impl Default for Seat {
@@ -1111,7 +1111,7 @@ pub mod builder {
 
         pub fn x<T>(mut self, value: T) -> Self
         where
-            T: TryInto<i64>,
+            T: TryInto<u16>,
             T::Error: core::fmt::Display,
         {
             self.x = value.try_into().map_err(|_e| {
@@ -1129,7 +1129,7 @@ pub mod builder {
 
         pub fn y<T>(mut self, value: T) -> Self
         where
-            T: TryInto<i64>,
+            T: TryInto<u16>,
             T::Error: core::fmt::Display,
         {
             self.y = value.try_into().map_err(|_e| {
@@ -1209,8 +1209,8 @@ pub mod builder {
     pub struct Zone {
         attributes: Result<AttributeVec, ClusterString>,
         name: Result<ClusterString, ClusterString>,
-        x: Result<i64, ClusterString>,
-        y: Result<i64, ClusterString>,
+        x: Result<u16, ClusterString>,
+        y: Result<u16, ClusterString>,
     }
 
     impl Default for Zone {
@@ -1278,7 +1278,7 @@ pub mod builder {
 
         pub fn x<T>(mut self, value: T) -> Self
         where
-            T: TryInto<i64>,
+            T: TryInto<u16>,
             T::Error: core::fmt::Display,
         {
             self.x = value.try_into().map_err(|_e| {
@@ -1296,7 +1296,7 @@ pub mod builder {
 
         pub fn y<T>(mut self, value: T) -> Self
         where
-            T: TryInto<i64>,
+            T: TryInto<u16>,
             T::Error: core::fmt::Display,
         {
             self.y = value.try_into().map_err(|_e| {
