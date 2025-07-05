@@ -1,0 +1,12 @@
+[package]
+name = "simulator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Use the embedded-graphics simulator
+embedded-graphics-simulator = "0.7.0"
+embedded-graphics = { workspace = true }
+
+# Shared animation logic
+cluster-matrix = { path = "../cluster-matrix" }

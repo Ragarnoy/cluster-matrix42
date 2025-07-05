@@ -1,0 +1,14 @@
+[package]
+name = "graphics-common"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+std = []
+
+[dependencies]
+embedded-graphics-core = { workspace = true }
+embedded-graphics = { workspace = true }
+heapless = { workspace = true }
+libm = { workspace = true }

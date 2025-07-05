@@ -1,10 +1,13 @@
 [workspace]
 resolver = "3"
-members = [ "common",
-    "embd-tests",
-#    "hub75-driver",
-    "hub75-rp2350-driver",
-    "simulator"
+members = [
+    "graphics-common",
+    "cluster-core",
+    "applications/cluster-matrix",
+    "applications/simulator",
+    "drivers/hub75-rp2350-driver",
+    # "drivers/hub75-driver",  # Temporarily disabled due to missing dependencies
+    "hardware-tests/basic-panel"
 ]
 
 [profile.release]
@@ -18,8 +21,10 @@ lto = true
 
 [workspace.dependencies]
 # Local dependencies
+graphics-common = { path = "graphics-common" }
+cluster-core = { path = "cluster-core" }
 #hub75-driver = { path = "hub75-driver" }
-hub75-rp2350-driver = { path = "hub75-rp2350-driver" }
+hub75-rp2350-driver = { path = "drivers/hub75-rp2350-driver" }
 
 # Embedded dependencies
 embedded-graphics-core = "0.4"

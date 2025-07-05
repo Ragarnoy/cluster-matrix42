@@ -75,6 +75,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "basic-panel"
+version = "0.1.0"
+dependencies = [
+ "cluster-matrix",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "embassy-executor",
+ "embassy-rp",
+ "embassy-time",
+ "hub75-rp2350-driver",
+ "panic-probe",
+ "static_cell",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -141,6 +157,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "cluster-core"
+version = "0.1.0"
+dependencies = [
+ "embedded-graphics",
+ "embedded-graphics-core",
+ "graphics-common",
+ "heapless",
+ "libm",
+]
+
+[[package]]
+name = "cluster-matrix"
+version = "0.1.0"
+dependencies = [
+ "cluster-core",
+ "embedded-graphics",
+ "graphics-common",
+ "heapless",
+ "libm",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -148,15 +186,6 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
-]
-
-[[package]]
-name = "common"
-version = "0.1.0"
-dependencies = [
- "embedded-graphics",
- "heapless",
- "libm",
 ]
 
 [[package]]
@@ -499,22 +528,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "embd-tests"
-version = "0.1.0"
-dependencies = [
- "common",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "embassy-executor",
- "embassy-rp",
- "embassy-time",
- "hub75-rp2350-driver",
- "panic-probe",
- "static_cell",
-]
-
-[[package]]
 name = "embedded-graphics"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -755,6 +768,16 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "graphics-common"
+version = "0.1.0"
+dependencies = [
+ "embedded-graphics",
+ "embedded-graphics-core",
+ "heapless",
+ "libm",
 ]
 
 [[package]]
@@ -1429,7 +1452,7 @@ checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 name = "simulator"
 version = "0.1.0"
 dependencies = [
- "common",
+ "cluster-matrix",
  "embedded-graphics",
  "embedded-graphics-simulator",
 ]

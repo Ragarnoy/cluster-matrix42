@@ -5,7 +5,7 @@ name: Minimal CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
 
 env:
@@ -37,26 +37,50 @@ jobs:
       # Format
       - name: Check formatting
         run: cargo fmt --all -- --check
+        
+      # Workspace check
+      - name: Check core packages
+        run: |
+          cargo check -p graphics-common
+          cargo check -p cluster-core  
+          cargo check -p cluster-matrix
+          cargo check -p simulator
+          cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --features "waveshare_64x32"
+          cargo check -p basic-panel --target thumbv8m.main-none-eabihf --features "waveshare"
 
       # Clippy
-      - name: Clippy
+      - name: Clippy - Desktop/Simulator packages
         run: |
           cargo clippy -p simulator -- -D warnings
-          cargo clippy -p common --all-features -- -D warnings
+          cargo clippy -p graphics-common --all-features -- -D warnings
+          cargo clippy -p cluster-core --all-features -- -D warnings
+          cargo clippy -p cluster-matrix --all-features -- -D warnings
+          
+      - name: Clippy - Embedded packages
+        run: |
           cargo clippy -p hub75-rp2350-driver --features "waveshare_64x32" --target thumbv8m.main-none-eabihf -- -D warnings
-          cargo clippy -p embd-tests --features "waveshare" --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p basic-panel --features "waveshare" --target thumbv8m.main-none-eabihf -- -D warnings
 
       # Build
-      - name: Build all
+      - name: Build - Desktop/Simulator packages
         run: |
+          cargo build -p graphics-common --release
+          cargo build -p cluster-core --release
+          cargo build -p cluster-matrix --release
           cargo build -p simulator --release
-          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --features "waveshare"
+          
+      - name: Build - Embedded packages
+        run: |
+          cargo build -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --release --features "waveshare_64x32"
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf --release --features "waveshare"
 
       # Test
       - name: Run tests
         run: |
           cargo test -p simulator
-          cargo test -p common --features std
+          cargo test -p graphics-common --features std
+          cargo test -p cluster-core --features std
+          cargo test -p cluster-matrix --features std
 
       # Size check (only on PR)
       - name: Check binary size
@@ -66,13 +90,13 @@ jobs:
           rustup component add llvm-tools
           
           # Build current version
-          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --bin basic_panel
-          cargo size --release --bin basic_panel -p embd-tests --target thumbv8m.main-none-eabihf -- -A > pr-size.txt
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf --release --bin basic_panel
+          cargo size --release --bin basic_panel -p basic-panel --target thumbv8m.main-none-eabihf -- -A > pr-size.txt
           
           # Build base version
           git checkout ${{ github.event.pull_request.base.sha }}
-          cargo build -p embd-tests --target thumbv8m.main-none-eabihf --release --bin basic_panel
-          cargo size --release --bin basic_panel -p embd-tests --target thumbv8m.main-none-eabihf -- -A > base-size.txt
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf --release --bin basic_panel
+          cargo size --release --bin basic_panel -p basic-panel --target thumbv8m.main-none-eabihf -- -A > base-size.txt
           
           # Compare
           BASE_SIZE=$(grep "Total" base-size.txt | awk '{print $2}' || echo "0")

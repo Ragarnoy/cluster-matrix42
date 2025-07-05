@@ -1,0 +1,34 @@
+[package]
+name = "basic-panel"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hub75-rp2350-driver = { workspace = true }
+cluster-matrix = { path = "../../applications/cluster-matrix" }
+
+# Logging dependencies
+defmt = { version = "1.0.1" }
+defmt-rtt = { workspace = true }
+panic-probe = { workspace = true, features = ["print-defmt"] }
+
+# Embassy dependencies
+cortex-m-rt = { workspace = true }
+embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
+embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
+static_cell = { workspace = true }
+
+[lib]
+test = false
+bench = false
+
+[[bin]]
+name = "basic_panel"
+test = false
+bench = false
+
+[features]
+waveshare = ["hub75-rp2350-driver/waveshare_64x32"]
+128 = ["hub75-rp2350-driver/wtf_128x128"]
+64 = ["hub75-rp2350-driver/wtf_64x64"]
