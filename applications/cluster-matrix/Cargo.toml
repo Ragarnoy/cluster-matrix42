@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 graphics-common = { path = "../../graphics-common" }
-cluster-core = { path = "../../cluster-core", default-features = false }
 
 [features]
 default = []

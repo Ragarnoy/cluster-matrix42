@@ -170,7 +170,6 @@ dependencies = [
 name = "cluster-matrix"
 version = "0.1.0"
 dependencies = [
- "cluster-core",
  "graphics-common",
 ]
 
