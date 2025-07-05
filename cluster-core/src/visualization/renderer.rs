@@ -4,12 +4,12 @@ use crate::constants::MAX_FLOORS;
 use crate::shared::types::{Floor, Zone};
 use crate::visualization::{
     cluster::{Cluster, ClusterLayout},
-    display::{visual, DisplayLayout, DEFAULT_LAYOUT},
+    display::{DEFAULT_LAYOUT, DisplayLayout, visual},
 };
 use core::fmt::Write;
 use embedded_graphics::mono_font::ascii::FONT_4X6;
 use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, MonoTextStyle},
+    mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::Rgb565,
     prelude::*,
     primitives::{PrimitiveStyle, Rectangle},

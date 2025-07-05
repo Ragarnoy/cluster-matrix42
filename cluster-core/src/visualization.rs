@@ -8,7 +8,7 @@ pub mod seats;
 
 // Re-export commonly used types for convenience
 pub use cluster::{Cluster, ClusterLayout, SeatPosition, ZoneInfo};
-pub use display::{DisplayLayout, DEFAULT_LAYOUT};
+pub use display::{DEFAULT_LAYOUT, DisplayLayout};
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 pub use layouts::{CustomLayout, GridLayout};
 pub use renderer::ClusterRenderer;

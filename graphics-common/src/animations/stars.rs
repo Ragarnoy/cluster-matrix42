@@ -9,7 +9,7 @@ use core::iter::Iterator;
 use core::result::Result;
 use core::result::Result::Ok;
 use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, MonoTextStyle},
+    mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::Rgb565,
     prelude::*,
     primitives::{Circle, PrimitiveStyle, Rectangle},
