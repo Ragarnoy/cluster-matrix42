@@ -3,7 +3,6 @@
 #![no_std]
 #![no_main]
 
-use cluster_matrix::animations;
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
@@ -11,6 +10,7 @@ use embassy_rp::multicore::{Stack, spawn_core1};
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
+use graphics_common::animations;
 use hub75_rp2350_driver::{DisplayMemory, Hub75};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};

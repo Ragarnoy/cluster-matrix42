@@ -16,7 +16,7 @@ type ClusterString = heapless::String<16>; // Reasonable limit for cluster names
 #[cfg(feature = "std")]
 type SeatVec = std::vec::Vec<Seat>;
 #[cfg(not(feature = "std"))]
-type SeatVec = heapless::Vec<Seat, crate::constants::MAX_SEATS_PER_CLUSTER>;
+type SeatVec = heapless::Vec<Seat, { crate::constants::MAX_SEATS_PER_CLUSTER }>;
 
 #[cfg(feature = "std")]
 type ZoneVec = std::vec::Vec<Zone>;
