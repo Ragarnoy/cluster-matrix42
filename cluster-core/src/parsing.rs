@@ -9,9 +9,19 @@
 
 // Type aliases for conditional compilation
 #[cfg(feature = "std")]
+type String = std::string::String;
+#[cfg(not(feature = "std"))]
+type String = heapless::String<crate::constants::MAX_STRING_LENGTH>;
+
+#[cfg(feature = "std")]
 type ClusterString = std::string::String;
 #[cfg(not(feature = "std"))]
-type ClusterString = heapless::String<16>; // Reasonable limit for cluster names
+type ClusterString = heapless::String<crate::constants::MAX_CLUSTER_NAME>;
+
+#[cfg(feature = "std")]
+type MessageString = std::string::String;
+#[cfg(not(feature = "std"))]
+type MessageString = heapless::String<crate::constants::MAX_MESSAGE_LENGTH>;
 
 #[cfg(feature = "std")]
 type SeatVec = std::vec::Vec<Seat>;
@@ -21,12 +31,12 @@ type SeatVec = heapless::Vec<Seat, { crate::constants::MAX_SEATS_PER_CLUSTER }>;
 #[cfg(feature = "std")]
 type ZoneVec = std::vec::Vec<Zone>;
 #[cfg(not(feature = "std"))]
-type ZoneVec = heapless::Vec<Zone, 4>;
+type ZoneVec = heapless::Vec<Zone, crate::constants::MAX_STATUS>;
 
 #[cfg(feature = "std")]
 type AttributeVec = std::vec::Vec<Attribute>;
 #[cfg(not(feature = "std"))]
-type AttributeVec = heapless::Vec<Attribute, 4>;
+type AttributeVec = heapless::Vec<Attribute, crate::constants::MAX_ATTRIBUTES>;
 
 #[doc = r" Error types."]
 pub mod error {
@@ -292,10 +302,16 @@ impl TryFrom<ClusterString> for Status {
     }
 }
 
+#[cfg(feature = "std")]
+pub type SeatId = std::string::String;
+#[cfg(not(feature = "std"))]
+pub type SeatId = heapless::String<crate::constants::MAX_SEAT_ID_LENGTH>;
+
 #[doc = "`ClusterId`"]
 #[derive(
     serde::Deserialize, serde::Serialize, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
+
 pub enum ClusterId {
     #[serde(rename = "hidden")]
     Hidden,
@@ -416,10 +432,11 @@ impl Layout {
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Seat {
+    pub id: SeatId,
     pub kind: Kind,
     pub status: Status,
-    pub x: u16,
-    pub y: u16,
+    pub x: usize,
+    pub y: usize,
 }
 impl From<&Seat> for Seat {
     fn from(value: &Seat) -> Self {
@@ -438,8 +455,8 @@ impl Seat {
 pub struct Zone {
     pub attributes: AttributeVec,
     pub name: ClusterString,
-    pub x: u16,
-    pub y: u16,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl From<&Zone> for Zone {
@@ -457,10 +474,15 @@ impl Zone {
 #[doc = "`Cluster`"]
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Cluster {
+    pub message: MessageString,
     pub attributes: AttributeVec,
     pub name: ClusterString,
     pub seats: SeatVec,
     pub zones: ZoneVec,
+}
+pub struct ClusterSize {
+    w: usize,
+    h: usize,
 }
 
 impl From<&Cluster> for Cluster {
@@ -472,6 +494,14 @@ impl From<&Cluster> for Cluster {
 impl Cluster {
     pub fn builder() -> builder::Cluster {
         Default::default()
+    }
+    pub fn grid_size(&self) -> (usize, usize) {
+        let min_x = self.seats.iter().map(|p| p.x).fold(usize::MAX, usize::min);
+        let max_x = self.seats.iter().map(|p| p.x).fold(0, usize::max);
+        let min_y = self.seats.iter().map(|p| p.y).fold(usize::MAX, usize::min);
+        let max_y = self.seats.iter().map(|p| p.y).fold(0, usize::max);
+
+        (max_x - min_x, max_y - min_y)
     }
 }
 
@@ -876,10 +906,11 @@ pub mod builder {
         }
     }
     pub struct Cluster {
-        attributes: Result<AttributeVec, ClusterString>,
-        name: Result<ClusterString, ClusterString>,
-        seats: Result<SeatVec, ClusterString>,
-        zones: Result<ZoneVec, ClusterString>,
+        message: Result<MessageString, String>,
+        attributes: Result<AttributeVec, String>,
+        name: Result<ClusterString, String>,
+        seats: Result<SeatVec, String>,
+        zones: Result<ZoneVec, String>,
     }
 
     impl Default for Cluster {
@@ -887,6 +918,7 @@ pub mod builder {
             #[cfg(feature = "std")]
             {
                 Self {
+                    message: Err("no value supplied for message".into()),
                     attributes: Err("no value supplied for attributes".into()),
                     name: Err("no value supplied for name".into()),
                     seats: Err("no value supplied for seats".into()),
@@ -986,6 +1018,17 @@ pub mod builder {
         type Error = error::ConversionError;
         fn try_from(value: Cluster) -> Result<Self, error::ConversionError> {
             Ok(Self {
+                message: value.message.map_err(|_e| {
+                    #[cfg(feature = "std")]
+                    {
+                        super::error::ConversionError::from(_e)
+                    }
+                    #[cfg(not(feature = "std"))]
+                    {
+                        super::error::ConversionError::from("builder error for message")
+                    }
+                })?,
+
                 attributes: value.attributes.map_err(|_e| {
                     #[cfg(feature = "std")]
                     {
@@ -1033,6 +1076,7 @@ pub mod builder {
     impl From<super::Cluster> for Cluster {
         fn from(value: super::Cluster) -> Self {
             Self {
+                message: Ok(value.message),
                 attributes: Ok(value.attributes),
                 name: Ok(value.name),
                 seats: Ok(value.seats),
@@ -1043,10 +1087,11 @@ pub mod builder {
 
     #[derive(Clone, Debug)]
     pub struct Seat {
-        kind: Result<Kind, ClusterString>,
-        status: Result<Status, ClusterString>,
-        x: Result<u16, ClusterString>,
-        y: Result<u16, ClusterString>,
+        id: Result<SeatId, String>,
+        kind: Result<Kind, String>,
+        status: Result<Status, String>,
+        x: Result<usize, String>,
+        y: Result<usize, String>,
     }
 
     impl Default for Seat {
@@ -1054,6 +1099,7 @@ pub mod builder {
             #[cfg(feature = "std")]
             {
                 Self {
+                    id: Err("no value supplied for id".into()),
                     kind: Err("no value supplied for kind".into()),
                     status: Err("no value supplied for status".into()),
                     x: Err("no value supplied for x".into()),
@@ -1073,6 +1119,24 @@ pub mod builder {
     }
 
     impl Seat {
+        pub fn id<T>(mut self, value: T) -> Self
+        where
+            T: TryInto<SeatId>,
+            T::Error: core::fmt::Display,
+        {
+            self.id = value.try_into().map_err(|_e| {
+                #[cfg(feature = "std")]
+                {
+                    format!("error converting supplied value for id: {_e}")
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    ClusterString::try_from("error converting supplied value for id").unwrap()
+                }
+            });
+            self
+        }
+
         pub fn kind<T>(mut self, value: T) -> Self
         where
             T: TryInto<Kind>,
@@ -1111,7 +1175,7 @@ pub mod builder {
 
         pub fn x<T>(mut self, value: T) -> Self
         where
-            T: TryInto<u16>,
+            T: TryInto<usize>,
             T::Error: core::fmt::Display,
         {
             self.x = value.try_into().map_err(|_e| {
@@ -1129,7 +1193,7 @@ pub mod builder {
 
         pub fn y<T>(mut self, value: T) -> Self
         where
-            T: TryInto<u16>,
+            T: TryInto<usize>,
             T::Error: core::fmt::Display,
         {
             self.y = value.try_into().map_err(|_e| {
@@ -1150,6 +1214,16 @@ pub mod builder {
         type Error = error::ConversionError;
         fn try_from(value: Seat) -> Result<Self, error::ConversionError> {
             Ok(Self {
+                id: value.id.map_err(|_e| {
+                    #[cfg(feature = "std")]
+                    {
+                        super::error::ConversionError::from(_e)
+                    }
+                    #[cfg(not(feature = "std"))]
+                    {
+                        super::error::ConversionError::from("builder error for id")
+                    }
+                })?,
                 kind: value.kind.map_err(|_e| {
                     #[cfg(feature = "std")]
                     {
@@ -1197,6 +1271,7 @@ pub mod builder {
     impl From<super::Seat> for Seat {
         fn from(value: super::Seat) -> Self {
             Self {
+                id: Ok(value.id),
                 kind: Ok(value.kind),
                 status: Ok(value.status),
                 x: Ok(value.x),
@@ -1209,8 +1284,8 @@ pub mod builder {
     pub struct Zone {
         attributes: Result<AttributeVec, ClusterString>,
         name: Result<ClusterString, ClusterString>,
-        x: Result<u16, ClusterString>,
-        y: Result<u16, ClusterString>,
+        x: Result<usize, ClusterString>,
+        y: Result<usize, ClusterString>,
     }
 
     impl Default for Zone {
@@ -1278,7 +1353,7 @@ pub mod builder {
 
         pub fn x<T>(mut self, value: T) -> Self
         where
-            T: TryInto<u16>,
+            T: TryInto<usize>,
             T::Error: core::fmt::Display,
         {
             self.x = value.try_into().map_err(|_e| {
@@ -1296,7 +1371,7 @@ pub mod builder {
 
         pub fn y<T>(mut self, value: T) -> Self
         where
-            T: TryInto<u16>,
+            T: TryInto<usize>,
             T::Error: core::fmt::Display,
         {
             self.y = value.try_into().map_err(|_e| {
@@ -1447,6 +1522,7 @@ mod tests {
     #[test]
     fn test_seat_creation_and_serialization() {
         let seat = Seat {
+            id: "f1r3s2".into(),
             kind: Kind::Lenovo,
             status: Status::Reported,
             x: 10,
@@ -1490,6 +1566,7 @@ mod tests {
     #[test]
     fn test_layout_creation_and_serialization() {
         let cluster = Cluster {
+            message: "Test MOTD".to_string(),
             attributes: vec![Attribute::Piscine],
             name: "Test Cluster".to_string(),
             seats: vec![],
@@ -1534,6 +1611,7 @@ mod tests {
     #[test]
     fn test_cluster_creation_and_serialization() {
         let seat = Seat {
+            id: "f1r3s3".into(),
             kind: Kind::Mac,
             status: Status::Free,
             x: 5,
@@ -1548,6 +1626,7 @@ mod tests {
         };
 
         let cluster = Cluster {
+            message: "Test MOTD".to_string(),
             attributes: vec![Attribute::Piscine, Attribute::Exam],
             name: "E0".to_string(),
             seats: vec![seat],
@@ -1566,6 +1645,7 @@ mod tests {
     #[test]
     fn test_seat_builder_success() {
         let seat: Seat = Seat::builder()
+            .id("f1r3s3")
             .kind(Kind::Dell)
             .status(Status::Taken)
             .x(15)
@@ -1618,6 +1698,7 @@ mod tests {
     #[test]
     fn test_layout_builder_success() {
         let cluster = Cluster {
+            message: "Test MOTD".to_string(),
             attributes: vec![],
             name: "Layout Cluster".to_string(),
             seats: vec![],
@@ -1656,6 +1737,7 @@ mod tests {
     #[test]
     fn test_layout_builder_missing_field() {
         let cluster = Cluster {
+            message: "Test MOTD".to_string(),
             attributes: vec![],
             name: "Partial Cluster".to_string(),
             seats: vec![],
@@ -1686,6 +1768,7 @@ mod tests {
     #[test]
     fn test_cluster_builder_success() {
         let seat = Seat {
+            id: "f2r5s4".into(),
             kind: Kind::Mac,
             status: Status::Free,
             x: 1,
@@ -1759,8 +1842,8 @@ mod tests {
             "attributes": ["piscine", "exam"],
             "name": "Complex Cluster",
             "seats": [
-                {"kind": "mac", "status": "taken", "x": 0, "y": 0},
-                {"kind": "dell", "status": "free", "x": 1, "y": 0}
+                {"id": "f1r1s1", "kind": "mac", "status": "taken", "x": 0, "y": 0},
+                {"id": "f1r1s1", "kind": "dell", "status": "free", "x": 1, "y": 0}
             ],
             "zones": [
                 {"attributes": ["silent"], "name": "Quiet Zone", "x": 0, "y": 0}

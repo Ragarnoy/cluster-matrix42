@@ -170,7 +170,18 @@ dependencies = [
 name = "cluster-matrix"
 version = "0.1.0"
 dependencies = [
+ "cluster-core",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "embassy-executor",
+ "embassy-rp",
+ "embassy-sync",
+ "embassy-time",
  "graphics-common",
+ "hub75-rp2350-driver",
+ "panic-probe",
+ "static_cell",
 ]
 
 [[package]]

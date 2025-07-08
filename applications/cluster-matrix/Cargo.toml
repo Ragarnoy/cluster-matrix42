@@ -4,8 +4,19 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-graphics-common = { path = "../../graphics-common" }
+hub75-rp2350-driver = { workspace = true, features = ["gbr_128x128"] }
+graphics-common = { workspace = true }
+cluster-core = { workspace = true }
 
-[features]
-default = []
-std = []
+# Logging dependencies
+defmt = { version = "1.0.1" }
+defmt-rtt = { workspace = true }
+panic-probe = { workspace = true, features = ["print-defmt"] }
+
+# Embassy dependencies
+cortex-m-rt = { workspace = true }
+embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
+embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-sync = { workspace = true }
+static_cell = { workspace = true }
