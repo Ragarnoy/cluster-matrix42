@@ -12,7 +12,7 @@ pub const DISPLAY_HEIGHT: u32 = 128;
 /// Layout region heights
 pub const HEADER_HEIGHT: u32 = 8;
 pub const STATUS_BAR_HEIGHT: u32 = 8;
-pub const FLOOR_INFO_WIDTH: u32 = 16;
+pub const FLOOR_INFO_WIDTH: u32 = 32;
 
 /// Main display layout regions for the 64x64 matrix
 #[derive(Clone, Copy, Debug)]
@@ -28,14 +28,14 @@ impl DisplayLayout {
         Self {
             header: Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH, HEADER_HEIGHT)),
             floor_info: Rectangle::new(
-                Point::new(0, HEADER_HEIGHT as i32),
+                Point::new(0, HEADER_HEIGHT as i32 * 3),
                 Size::new(
                     FLOOR_INFO_WIDTH,
                     DISPLAY_HEIGHT - HEADER_HEIGHT - STATUS_BAR_HEIGHT,
                 ),
             ),
             cluster_area: Rectangle::new(
-                Point::new(FLOOR_INFO_WIDTH as i32, HEADER_HEIGHT as i32),
+                Point::new(FLOOR_INFO_WIDTH as i32, HEADER_HEIGHT as i32 * 3),
                 Size::new(
                     DISPLAY_WIDTH - FLOOR_INFO_WIDTH,
                     DISPLAY_HEIGHT - HEADER_HEIGHT - STATUS_BAR_HEIGHT,
@@ -71,7 +71,8 @@ pub mod visual {
     /// UI element colors
     pub const TEXT_COLOR: Rgb565 = Rgb565::WHITE;
     pub const FLOOR_INACTIVE: Rgb565 = Rgb565::CSS_GRAY;
-    pub const FLOOR_ACTIVE: Rgb565 = Rgb565::WHITE;
+    pub const FLOOR_SELECTED: Rgb565 = Rgb565::WHITE;
+    pub const FLOOR_UNSELECTED: Rgb565 = Rgb565::WHITE;
     pub const ZONE_SEPARATOR: Rgb565 = Rgb565::YELLOW;
 
     /// Status bar colors

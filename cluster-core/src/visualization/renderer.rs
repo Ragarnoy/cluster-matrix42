@@ -1,7 +1,8 @@
 //! Cluster visualization renderer
 
 use crate::constants::MAX_FLOORS;
-use crate::models::Cluster;
+use crate::models::{Cluster, Seat};
+use crate::types::{Kind, Status};
 use crate::visualization::display::{DEFAULT_LAYOUT, DisplayLayout, visual};
 use core::fmt::Write;
 use embedded_graphics::mono_font::ascii::FONT_4X6;
@@ -44,7 +45,7 @@ impl ClusterRenderer {
         Self::render_header(display, &cluster.message, frame)?;
         self.render_floor_info(display, cluster)?;
         self.render_cluster::<D>(display, cluster)?;
-        self.render_status_bar(display, 0)?;
+        self.render_status_bar(display, 33)?;
 
         Ok(())
     }
@@ -55,15 +56,15 @@ impl ClusterRenderer {
     {
         // Scrolling text for MOTD
         let text_width = motd.len() * 6; // Approximate width with FONT_6X10
-        let total_scroll_width = text_width + 64;
+        let total_scroll_width = text_width + 128;
         let scroll_pos = ((frame / 2) as usize) % total_scroll_width;
-        let x_offset = 64i32 - scroll_pos as i32;
+        let x_offset = 128i32 - scroll_pos as i32;
 
         let style = MonoTextStyle::new(&FONT_6X10, visual::TEXT_COLOR);
         Text::new(motd, Point::new(x_offset, 6), style).draw(display)?;
 
         // Draw the message again for seamless scrolling
-        if x_offset + (text_width as i32) < 64 {
+        if x_offset + (text_width as i32) < 128 {
             Text::new(
                 motd,
                 Point::new(x_offset + text_width as i32 + 20, 6),
@@ -85,6 +86,17 @@ impl ClusterRenderer {
             .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_INDICATOR_BG))
             .draw(display)?;
 
+        // Draw floor number
+        let mut floor_num: String<3> = String::new();
+        write!(&mut floor_num, "F{}", 0).unwrap();
+        let text_style = MonoTextStyle::new(&FONT_4X6, visual::TEXT_COLOR);
+        Text::new(
+            &floor_num,
+            Point::new(self.layout.floor_info.top_left.x + 4, 20),
+            text_style,
+        )
+        .draw(display)?;
+
         // Draw floor indicator bars
         let bar_height = self.layout.floor_info.size.height / MAX_FLOORS as u32;
         // TODO change to value from app state
@@ -93,31 +105,17 @@ impl ClusterRenderer {
         for i in 0..MAX_FLOORS {
             let y = self.layout.floor_info.top_left.y + (i as u32 * bar_height) as i32;
             let color = if i == current_floor {
-                visual::FLOOR_ACTIVE
+                PrimitiveStyle::with_fill(Rgb565::WHITE)
             } else {
-                visual::FLOOR_INACTIVE
+                PrimitiveStyle::with_stroke(Rgb565::WHITE, 1)
             };
 
             // Draw floor bar with margins
             Rectangle::new(
-                Point::new(self.layout.floor_info.top_left.x + 2, y + 2),
-                Size::new(12, bar_height - 4),
+                Point::new(self.layout.floor_info.top_left.x + 2, y),
+                Size::new(30, 6),
             )
-            .into_styled(PrimitiveStyle::with_fill(color))
-            .draw(display)?;
-
-            // Draw floor number
-            let mut floor_num: String<2> = String::new();
-            write!(&mut floor_num, "F{}", MAX_FLOORS - i).unwrap();
-            let text_style = MonoTextStyle::new(&FONT_4X6, visual::TEXT_COLOR);
-            Text::new(
-                &floor_num,
-                Point::new(
-                    self.layout.floor_info.top_left.x + 4,
-                    y + bar_height as i32 - 4,
-                ),
-                text_style,
-            )
+            .into_styled(color)
             .draw(display)?;
         }
 
@@ -161,28 +159,21 @@ impl ClusterRenderer {
                 Point::new(seat.x as i32 + offset_x, seat.y as i32 + offset_y),
                 Size::new(visual::SEAT_SIZE, visual::SEAT_SIZE),
             )
-            .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
+            .into_styled(PrimitiveStyle::with_fill(Self::seat_to_color(seat)))
             .draw(display)?;
         }
 
-        // // Draw zone separators (vertical lines between zones)
-        // for zone in zones.iter().take(zones.len().saturating_sub(1)) {
-        //     let gap_x = zone.end_col + 1;
-        //     let x = offset_x + (gap_x as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32)
-        //         - (visual::ZONE_GAP / 2) as i32;
-        //
-        //     for y_grid in 0..grid_height {
-        //         let y =
-        //             offset_y + (y_grid as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32);
-        //
-        //         // Draw a vertical separator line
-        //         Rectangle::new(Point::new(x, y), Size::new(1, visual::SEAT_SIZE))
-        //             .into_styled(PrimitiveStyle::with_fill(visual::ZONE_SEPARATOR))
-        //             .draw(display)?;
-        //     }
-        // }
-
         Ok(())
+    }
+
+    fn seat_to_color(seat: &Seat) -> Rgb565 {
+        match (seat.kind, seat.status) {
+            (Kind::Dell | Kind::Lenovo | Kind::Mac, Status::Free) => Rgb565::GREEN,
+            (Kind::Dell | Kind::Lenovo | Kind::Mac, Status::Taken) => Rgb565::BLUE,
+            (Kind::Dell | Kind::Lenovo | Kind::Mac, Status::Broken) => Rgb565::RED,
+            (Kind::Flex, _) => Rgb565::CSS_PURPLE,
+            _ => Rgb565::CSS_GRAY,
+        }
     }
 
     fn render_status_bar<D>(&self, display: &mut D, occupancy: u8) -> Result<(), D::Error>
