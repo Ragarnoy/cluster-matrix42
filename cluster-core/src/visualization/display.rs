@@ -6,8 +6,8 @@ use embedded_graphics::{
 };
 
 /// Display dimensions
-pub const DISPLAY_WIDTH: u32 = 64;
-pub const DISPLAY_HEIGHT: u32 = 64;
+pub const DISPLAY_WIDTH: u32 = 128;
+pub const DISPLAY_HEIGHT: u32 = 128;
 
 /// Layout region heights
 pub const HEADER_HEIGHT: u32 = 8;
@@ -81,7 +81,7 @@ pub mod visual {
     pub const OCCUPANCY_HIGH: Rgb565 = Rgb565::RED;
 
     /// Seat rendering constants
-    pub const SEAT_SIZE: u32 = 1;
+    pub const SEAT_SIZE: u32 = 2;
     pub const SEAT_SPACING: u32 = 2;
     pub const ZONE_GAP: u32 = 4;
 }

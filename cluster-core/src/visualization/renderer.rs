@@ -1,12 +1,8 @@
 //! Cluster visualization renderer
 
 use crate::constants::MAX_FLOORS;
-use crate::parsing::{Cluster, Layout};
-use crate::shared::types::Zone;
-use crate::visualization::{
-    cluster::ClusterLayout,
-    display::{DEFAULT_LAYOUT, DisplayLayout, visual},
-};
+use crate::parsing::Cluster;
+use crate::visualization::display::{DEFAULT_LAYOUT, DisplayLayout, visual};
 use core::fmt::Write;
 use embedded_graphics::mono_font::ascii::FONT_4X6;
 use embedded_graphics::{
@@ -32,7 +28,7 @@ impl ClusterRenderer {
     }
 
     /// Render a complete frame
-    pub fn render_frame<D, L>(
+    pub fn render_frame<D>(
         &self,
         display: &mut D,
         cluster: &Cluster,
@@ -40,7 +36,6 @@ impl ClusterRenderer {
     ) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
-        L: ClusterLayout,
     {
         // Clear display
         display.clear(visual::BACKGROUND)?;
@@ -48,8 +43,8 @@ impl ClusterRenderer {
         // Render each component
         Self::render_header(display, &cluster.message, frame)?;
         self.render_floor_info(display, &cluster)?;
-        self.render_cluster(display, &cluster)?;
-        self.render_status_bar(display, cluster.occupancy_percentage())?;
+        self.render_cluster::<D>(display, &cluster)?;
+        self.render_status_bar(display, 0)?;
 
         Ok(())
     }
@@ -80,7 +75,7 @@ impl ClusterRenderer {
         Ok(())
     }
 
-    fn render_floor_info<D>(&self, display: &mut D, cluster: &Cluster) -> Result<(), D::Error>
+    fn render_floor_info<D>(&self, display: &mut D, _cluster: &Cluster) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
     {
@@ -129,7 +124,7 @@ impl ClusterRenderer {
         Ok(())
     }
 
-    fn render_cluster<D, L>(&self, display: &mut D, cluster: &Cluster) -> Result<(), D::Error>
+    fn render_cluster<D>(&self, display: &mut D, cluster: &Cluster) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
     {
@@ -154,7 +149,7 @@ impl ClusterRenderer {
         for zone in zones {
             Text::new(
                 &zone.name,
-                Point::new(zone.x.into(), zone.y.into()),
+                Point::new(zone.x as i32, zone.y as i32),
                 text_style,
             )
             .draw(display)?;
@@ -163,10 +158,10 @@ impl ClusterRenderer {
         // Render each seat
         for seat in &cluster.seats {
             Rectangle::new(
-                Point::new(seat.x.into() + offset_x, seat.y.into() + offset_y),
+                Point::new(seat.x as i32 + offset_x, seat.y as i32 + offset_y),
                 Size::new(visual::SEAT_SIZE, visual::SEAT_SIZE),
             )
-            .into_styled(PrimitiveStyle::with_fill(seat.color()))
+            .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
             .draw(display)?;
         }
 

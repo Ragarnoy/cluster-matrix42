@@ -14,3 +14,4 @@ pub const MAX_SEAT_ID_LENGTH: usize = 16;
 
 pub const MAX_ATTRIBUTES: usize = 4;
 pub const MAX_STATUS: usize = 4;
+pub const MAX_ZONES: usize = 4;

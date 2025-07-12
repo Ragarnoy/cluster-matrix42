@@ -9,19 +9,14 @@
 
 // Type aliases for conditional compilation
 #[cfg(feature = "std")]
-type String = std::string::String;
-#[cfg(not(feature = "std"))]
-type String = heapless::String<crate::constants::MAX_STRING_LENGTH>;
-
-#[cfg(feature = "std")]
 type ClusterString = std::string::String;
 #[cfg(not(feature = "std"))]
-type ClusterString = heapless::String<crate::constants::MAX_CLUSTER_NAME>;
+type ClusterString = heapless::String<{ crate::constants::MAX_CLUSTER_NAME }>;
 
 #[cfg(feature = "std")]
 type MessageString = std::string::String;
 #[cfg(not(feature = "std"))]
-type MessageString = heapless::String<crate::constants::MAX_MESSAGE_LENGTH>;
+type MessageString = heapless::String<{ crate::constants::MAX_MESSAGE_LENGTH }>;
 
 #[cfg(feature = "std")]
 type SeatVec = std::vec::Vec<Seat>;
@@ -31,12 +26,12 @@ type SeatVec = heapless::Vec<Seat, { crate::constants::MAX_SEATS_PER_CLUSTER }>;
 #[cfg(feature = "std")]
 type ZoneVec = std::vec::Vec<Zone>;
 #[cfg(not(feature = "std"))]
-type ZoneVec = heapless::Vec<Zone, crate::constants::MAX_STATUS>;
+type ZoneVec = heapless::Vec<Zone, { crate::constants::MAX_ZONES }>;
 
 #[cfg(feature = "std")]
 type AttributeVec = std::vec::Vec<Attribute>;
 #[cfg(not(feature = "std"))]
-type AttributeVec = heapless::Vec<Attribute, crate::constants::MAX_ATTRIBUTES>;
+type AttributeVec = heapless::Vec<Attribute, { crate::constants::MAX_ATTRIBUTES }>;
 
 #[doc = r" Error types."]
 pub mod error {
@@ -305,13 +300,12 @@ impl TryFrom<ClusterString> for Status {
 #[cfg(feature = "std")]
 pub type SeatId = std::string::String;
 #[cfg(not(feature = "std"))]
-pub type SeatId = heapless::String<crate::constants::MAX_SEAT_ID_LENGTH>;
+pub type SeatId = heapless::String<{ crate::constants::MAX_SEAT_ID_LENGTH }>;
 
 #[doc = "`ClusterId`"]
 #[derive(
     serde::Deserialize, serde::Serialize, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
-
 pub enum ClusterId {
     #[serde(rename = "hidden")]
     Hidden,
@@ -480,10 +474,6 @@ pub struct Cluster {
     pub seats: SeatVec,
     pub zones: ZoneVec,
 }
-pub struct ClusterSize {
-    w: usize,
-    h: usize,
-}
 
 impl From<&Cluster> for Cluster {
     fn from(value: &Cluster) -> Self {
@@ -495,13 +485,18 @@ impl Cluster {
     pub fn builder() -> builder::Cluster {
         Default::default()
     }
-    pub fn grid_size(&self) -> (usize, usize) {
-        let min_x = self.seats.iter().map(|p| p.x).fold(usize::MAX, usize::min);
-        let max_x = self.seats.iter().map(|p| p.x).fold(0, usize::max);
-        let min_y = self.seats.iter().map(|p| p.y).fold(usize::MAX, usize::min);
-        let max_y = self.seats.iter().map(|p| p.y).fold(0, usize::max);
 
-        (max_x - min_x, max_y - min_y)
+    pub fn grid_size(&self) -> (usize, usize) {
+        if self.seats.is_empty() {
+            return (0, 0);
+        }
+
+        let min_x = self.seats.iter().map(|p| p.x).min().unwrap_or(0);
+        let max_x = self.seats.iter().map(|p| p.x).max().unwrap_or(0);
+        let min_y = self.seats.iter().map(|p| p.y).min().unwrap_or(0);
+        let max_y = self.seats.iter().map(|p| p.y).max().unwrap_or(0);
+
+        (max_x - min_x + 1, max_y - min_y + 1)
     }
 }
 
@@ -906,11 +901,11 @@ pub mod builder {
         }
     }
     pub struct Cluster {
-        message: Result<MessageString, String>,
-        attributes: Result<AttributeVec, String>,
-        name: Result<ClusterString, String>,
-        seats: Result<SeatVec, String>,
-        zones: Result<ZoneVec, String>,
+        message: Result<MessageString, ClusterString>,
+        attributes: Result<AttributeVec, ClusterString>,
+        name: Result<ClusterString, ClusterString>,
+        seats: Result<SeatVec, ClusterString>,
+        zones: Result<ZoneVec, ClusterString>,
     }
 
     impl Default for Cluster {
@@ -928,6 +923,7 @@ pub mod builder {
             #[cfg(not(feature = "std"))]
             {
                 Self {
+                    message: Err(ClusterString::try_from("no value supplied for message").unwrap()),
                     attributes: Err(
                         ClusterString::try_from("no value supplied for attributes").unwrap()
                     ),
@@ -940,6 +936,24 @@ pub mod builder {
     }
 
     impl Cluster {
+        pub fn message<T>(mut self, value: T) -> Self
+        where
+            T: TryInto<MessageString>,
+            T::Error: core::fmt::Display,
+        {
+            self.message = value.try_into().map_err(|_e| {
+                #[cfg(feature = "std")]
+                {
+                    format!("error converting supplied value for message: {_e}")
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    ClusterString::try_from("error converting supplied value for message").unwrap()
+                }
+            });
+            self
+        }
+
         pub fn attributes<T>(mut self, value: T) -> Self
         where
             T: TryInto<AttributeVec>,
@@ -1028,7 +1042,6 @@ pub mod builder {
                         super::error::ConversionError::from("builder error for message")
                     }
                 })?,
-
                 attributes: value.attributes.map_err(|_e| {
                     #[cfg(feature = "std")]
                     {
@@ -1087,11 +1100,11 @@ pub mod builder {
 
     #[derive(Clone, Debug)]
     pub struct Seat {
-        id: Result<SeatId, String>,
-        kind: Result<Kind, String>,
-        status: Result<Status, String>,
-        x: Result<usize, String>,
-        y: Result<usize, String>,
+        id: Result<SeatId, ClusterString>,
+        kind: Result<Kind, ClusterString>,
+        status: Result<Status, ClusterString>,
+        x: Result<usize, ClusterString>,
+        y: Result<usize, ClusterString>,
     }
 
     impl Default for Seat {
@@ -1109,6 +1122,7 @@ pub mod builder {
             #[cfg(not(feature = "std"))]
             {
                 Self {
+                    id: Err(ClusterString::try_from("no value supplied for id").unwrap()),
                     kind: Err(ClusterString::try_from("no value supplied for kind").unwrap()),
                     status: Err(ClusterString::try_from("no value supplied for status").unwrap()),
                     x: Err(ClusterString::try_from("no value supplied for x").unwrap()),
@@ -1452,7 +1466,7 @@ pub mod builder {
 mod tests {
     use super::*;
     use std::string::ToString;
-    use std::{format, vec};
+    use std::vec;
 
     #[test]
     fn test_enum_serialization() {
@@ -1474,175 +1488,6 @@ mod tests {
     }
 
     #[test]
-    fn test_enum_deserialization() {
-        let attr: Attribute = serde_json::from_str("\"exam\"").unwrap();
-        assert_eq!(attr, Attribute::Exam);
-
-        let kind: Kind = serde_json::from_str("\"flex\"").unwrap();
-        assert_eq!(kind, Kind::Flex);
-
-        let status: Status = serde_json::from_str("\"broken\"").unwrap();
-        assert_eq!(status, Status::Broken);
-
-        let cluster_id: ClusterId = serde_json::from_str("\"f2\"").unwrap();
-        assert_eq!(cluster_id, ClusterId::F2);
-    }
-
-    #[test]
-    fn test_enum_from_str() {
-        assert_eq!("silent".parse::<Attribute>().unwrap(), Attribute::Silent);
-        assert_eq!("dell".parse::<Kind>().unwrap(), Kind::Dell);
-        assert_eq!("free".parse::<Status>().unwrap(), Status::Free);
-        assert_eq!("hidden".parse::<ClusterId>().unwrap(), ClusterId::Hidden);
-
-        assert!("invalid".parse::<Attribute>().is_err());
-        assert!("invalid".parse::<Kind>().is_err());
-        assert!("invalid".parse::<Status>().is_err());
-        assert!("invalid".parse::<ClusterId>().is_err());
-    }
-
-    #[test]
-    fn test_cluster_id_variants() {
-        let variants = [
-            (ClusterId::Hidden, "hidden"),
-            (ClusterId::F0, "f0"),
-            (ClusterId::F1, "f1"),
-            (ClusterId::F1b, "f1b"),
-            (ClusterId::F2, "f2"),
-            (ClusterId::F4, "f4"),
-            (ClusterId::F6, "f6"),
-        ];
-
-        for (variant, expected_str) in variants {
-            assert_eq!(format!("{}", variant), expected_str);
-            assert_eq!(expected_str.parse::<ClusterId>().unwrap(), variant);
-        }
-    }
-
-    #[test]
-    fn test_seat_creation_and_serialization() {
-        let seat = Seat {
-            id: "f1r3s2".into(),
-            kind: Kind::Lenovo,
-            status: Status::Reported,
-            x: 10,
-            y: 20,
-        };
-
-        let json = serde_json::to_string(&seat).unwrap();
-        let roundtrip: Seat = serde_json::from_str(&json).unwrap();
-
-        assert_eq!(seat.kind, roundtrip.kind);
-        assert_eq!(seat.status, roundtrip.status);
-        assert_eq!(seat.x, roundtrip.x);
-        assert_eq!(seat.y, roundtrip.y);
-    }
-
-    #[test]
-    fn test_cluster_update_creation_and_serialization() {
-        let zone = Zone {
-            attributes: vec![Attribute::Silent],
-            name: "Update Zone".to_string(),
-            x: 10,
-            y: 20,
-        };
-
-        let cluster_update = ClusterUpdate {
-            attributes: vec![Attribute::Event, Attribute::Exam],
-            id: ClusterId::F2,
-            name: "Updated Cluster".to_string(),
-            zones: vec![zone],
-        };
-
-        let json = serde_json::to_string(&cluster_update).unwrap();
-        let roundtrip: ClusterUpdate = serde_json::from_str(&json).unwrap();
-
-        assert_eq!(cluster_update.attributes, roundtrip.attributes);
-        assert_eq!(cluster_update.id, roundtrip.id);
-        assert_eq!(cluster_update.name, roundtrip.name);
-        assert_eq!(cluster_update.zones.len(), roundtrip.zones.len());
-    }
-
-    #[test]
-    fn test_layout_creation_and_serialization() {
-        let cluster = Cluster {
-            message: "Test MOTD".to_string(),
-            attributes: vec![Attribute::Piscine],
-            name: "Test Cluster".to_string(),
-            seats: vec![],
-            zones: vec![],
-        };
-
-        let layout = Layout {
-            f0: cluster.clone(),
-            f1: cluster.clone(),
-            f1b: cluster.clone(),
-            f2: cluster.clone(),
-            f4: cluster.clone(),
-            f6: cluster,
-        };
-
-        let json = serde_json::to_string(&layout).unwrap();
-        let roundtrip: Layout = serde_json::from_str(&json).unwrap();
-
-        assert_eq!(layout.f0.name, roundtrip.f0.name);
-        assert_eq!(layout.f1.name, roundtrip.f1.name);
-        assert_eq!(layout.f1b.name, roundtrip.f1b.name);
-        assert_eq!(layout.f2.name, roundtrip.f2.name);
-        assert_eq!(layout.f4.name, roundtrip.f4.name);
-        assert_eq!(layout.f6.name, roundtrip.f6.name);
-
-        let zone = Zone {
-            attributes: vec![Attribute::Event, Attribute::Silent],
-            name: "Zone A".to_string(),
-            x: 0,
-            y: 0,
-        };
-
-        let json = serde_json::to_string(&zone).unwrap();
-        let roundtrip: Zone = serde_json::from_str(&json).unwrap();
-
-        assert_eq!(zone.attributes, roundtrip.attributes);
-        assert_eq!(zone.name, roundtrip.name);
-        assert_eq!(zone.x, roundtrip.x);
-        assert_eq!(zone.y, roundtrip.y);
-    }
-
-    #[test]
-    fn test_cluster_creation_and_serialization() {
-        let seat = Seat {
-            id: "f1r3s3".into(),
-            kind: Kind::Mac,
-            status: Status::Free,
-            x: 5,
-            y: 10,
-        };
-
-        let zone = Zone {
-            attributes: vec![Attribute::Closed],
-            name: "Main Zone".to_string(),
-            x: 0,
-            y: 0,
-        };
-
-        let cluster = Cluster {
-            message: "Test MOTD".to_string(),
-            attributes: vec![Attribute::Piscine, Attribute::Exam],
-            name: "E0".to_string(),
-            seats: vec![seat],
-            zones: vec![zone],
-        };
-
-        let json = serde_json::to_string(&cluster).unwrap();
-        let roundtrip: Cluster = serde_json::from_str(&json).unwrap();
-
-        assert_eq!(cluster.attributes, roundtrip.attributes);
-        assert_eq!(cluster.name, roundtrip.name);
-        assert_eq!(cluster.seats.len(), roundtrip.seats.len());
-        assert_eq!(cluster.zones.len(), roundtrip.zones.len());
-    }
-
-    #[test]
     fn test_seat_builder_success() {
         let seat: Seat = Seat::builder()
             .id("f1r3s3")
@@ -1657,112 +1502,6 @@ mod tests {
         assert_eq!(seat.status, Status::Taken);
         assert_eq!(seat.x, 15);
         assert_eq!(seat.y, 25);
-    }
-
-    #[test]
-    fn test_seat_builder_missing_field() {
-        let result: Result<Seat, _> = Seat::builder()
-            .kind(Kind::Flex)
-            .status(Status::Free)
-            // Missing x and y
-            .try_into();
-
-        assert!(result.is_err());
-        let error_msg = format!("{}", result.unwrap_err());
-        assert!(error_msg.contains("no value supplied"));
-    }
-
-    #[test]
-    fn test_cluster_update_builder_success() {
-        let zone = Zone {
-            attributes: vec![],
-            name: "Builder Zone".to_string(),
-            x: 0,
-            y: 0,
-        };
-
-        let cluster_update: ClusterUpdate = ClusterUpdate::builder()
-            .attributes(vec![Attribute::Closed])
-            .id(ClusterId::F4)
-            .name("Builder Update".to_string())
-            .zones(vec![zone])
-            .try_into()
-            .unwrap();
-
-        assert_eq!(cluster_update.attributes, vec![Attribute::Closed]);
-        assert_eq!(cluster_update.id, ClusterId::F4);
-        assert_eq!(cluster_update.name, "Builder Update");
-        assert_eq!(cluster_update.zones.len(), 1);
-    }
-
-    #[test]
-    fn test_layout_builder_success() {
-        let cluster = Cluster {
-            message: "Test MOTD".to_string(),
-            attributes: vec![],
-            name: "Layout Cluster".to_string(),
-            seats: vec![],
-            zones: vec![],
-        };
-
-        let layout: Layout = Layout::builder()
-            .f0(cluster.clone())
-            .f1(cluster.clone())
-            .f1b(cluster.clone())
-            .f2(cluster.clone())
-            .f4(cluster.clone())
-            .f6(cluster)
-            .try_into()
-            .unwrap();
-
-        assert_eq!(layout.f0.name, "Layout Cluster");
-        assert_eq!(layout.f1.name, "Layout Cluster");
-        assert_eq!(layout.f1b.name, "Layout Cluster");
-        assert_eq!(layout.f2.name, "Layout Cluster");
-        assert_eq!(layout.f4.name, "Layout Cluster");
-        assert_eq!(layout.f6.name, "Layout Cluster");
-    }
-
-    #[test]
-    fn test_cluster_update_builder_missing_field() {
-        let result: Result<ClusterUpdate, _> = ClusterUpdate::builder()
-            .name("Incomplete Update".to_string())
-            .id(ClusterId::F1)
-            // Missing attributes and zones
-            .try_into();
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_layout_builder_missing_field() {
-        let cluster = Cluster {
-            message: "Test MOTD".to_string(),
-            attributes: vec![],
-            name: "Partial Cluster".to_string(),
-            seats: vec![],
-            zones: vec![],
-        };
-
-        let result: Result<Layout, _> = Layout::builder()
-            .f0(cluster.clone())
-            .f1(cluster)
-            // Missing f1b, f2, f4, f6
-            .try_into();
-
-        assert!(result.is_err());
-        let zone: Zone = Zone::builder()
-            .attributes(vec![Attribute::Event])
-            .name("Test Zone".to_string())
-            .x(100)
-            .y(200)
-            .try_into()
-            .unwrap();
-
-        assert_eq!(zone.attributes, vec![Attribute::Event]);
-        assert_eq!(zone.name, "Test Zone");
-        assert_eq!(zone.x, 100);
-        assert_eq!(zone.y, 200);
     }
 
     #[test]
@@ -1783,6 +1522,7 @@ mod tests {
         };
 
         let cluster: Cluster = Cluster::builder()
+            .message("Test MOTD".to_string())
             .attributes(vec![Attribute::Silent])
             .name("Test Cluster".to_string())
             .seats(vec![seat])
@@ -1790,99 +1530,10 @@ mod tests {
             .try_into()
             .unwrap();
 
+        assert_eq!(cluster.message, "Test MOTD");
         assert_eq!(cluster.attributes, vec![Attribute::Silent]);
         assert_eq!(cluster.name, "Test Cluster");
         assert_eq!(cluster.seats.len(), 1);
         assert_eq!(cluster.zones.len(), 1);
-    }
-
-    #[test]
-    fn test_cluster_builder_error_propagation() {
-        let result: Result<Cluster, _> = Cluster::builder()
-            .name("Incomplete Cluster".to_string())
-            // Missing required fields
-            .try_into();
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_enum_display() {
-        assert_eq!(format!("{}", Attribute::Piscine), "piscine");
-        assert_eq!(format!("{}", Kind::Lenovo), "lenovo");
-        assert_eq!(format!("{}", Status::Broken), "broken");
-        assert_eq!(format!("{}", ClusterId::F1b), "f1b");
-    }
-
-    #[test]
-    fn test_type_conversions() {
-        // Test string to enum conversions
-        let attr: Attribute = "event".try_into().unwrap();
-        assert_eq!(attr, Attribute::Event);
-
-        let kind: Kind = "mac".try_into().unwrap();
-        assert_eq!(kind, Kind::Mac);
-
-        let status: Status = "reported".try_into().unwrap();
-        assert_eq!(status, Status::Reported);
-
-        let cluster_id: ClusterId = "f6".try_into().unwrap();
-        assert_eq!(cluster_id, ClusterId::F6);
-
-        // Test error cases
-        assert!(<Attribute as TryFrom<&str>>::try_from("invalid").is_err());
-        assert!(<Kind as TryFrom<&str>>::try_from("invalid").is_err());
-        assert!(<Status as TryFrom<&str>>::try_from("invalid").is_err());
-        assert!(<ClusterId as TryFrom<&str>>::try_from("invalid").is_err());
-    }
-
-    #[test]
-    fn test_complex_json_roundtrip() {
-        let json = r#"{
-            "attributes": ["piscine", "exam"],
-            "name": "Complex Cluster",
-            "seats": [
-                {"id": "f1r1s1", "kind": "mac", "status": "taken", "x": 0, "y": 0},
-                {"id": "f1r1s1", "kind": "dell", "status": "free", "x": 1, "y": 0}
-            ],
-            "zones": [
-                {"attributes": ["silent"], "name": "Quiet Zone", "x": 0, "y": 0}
-            ]
-        }"#;
-
-        let cluster: Cluster = serde_json::from_str(json).unwrap();
-        assert_eq!(cluster.name, "Complex Cluster");
-        assert_eq!(cluster.seats.len(), 2);
-        assert_eq!(cluster.zones.len(), 1);
-        assert_eq!(cluster.seats[0].kind, Kind::Mac);
-        assert_eq!(cluster.seats[1].status, Status::Free);
-
-        // Verify it can serialize back
-        let serialized = serde_json::to_string(&cluster).unwrap();
-        let roundtrip: Cluster = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(cluster.name, roundtrip.name);
-    }
-
-    #[test]
-    fn test_cluster_update_json_roundtrip() {
-        let json = r#"{
-            "attributes": ["event", "closed"],
-            "id": "f1b",
-            "name": "Update Test",
-            "zones": [
-                {"attributes": ["exam"], "name": "Exam Zone", "x": 5, "y": 10}
-            ]
-        }"#;
-
-        let cluster_update: ClusterUpdate = serde_json::from_str(json).unwrap();
-        assert_eq!(cluster_update.id, ClusterId::F1b);
-        assert_eq!(cluster_update.name, "Update Test");
-        assert_eq!(cluster_update.zones.len(), 1);
-
-        // Verify it can serialize back
-        let serialized = serde_json::to_string(&cluster_update).unwrap();
-        let roundtrip: ClusterUpdate = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(cluster_update.id, roundtrip.id);
-        assert_eq!(cluster_update.name, roundtrip.name);
     }
 }

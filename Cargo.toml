@@ -22,7 +22,7 @@ lto = true
 [workspace.dependencies]
 # Local dependencies
 graphics-common = { path = "graphics-common" }
-cluster-core = { path = "cluster-core", default-features = false }
+cluster-core = { path = "cluster-core" }
 #hub75-driver = { path = "hub75-driver" }
 hub75-rp2350-driver = { path = "drivers/hub75-rp2350-driver" }
 
