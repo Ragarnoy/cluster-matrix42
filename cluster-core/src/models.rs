@@ -1,23 +1,19 @@
 //! Main data models for cluster representation
 
-use crate::types::{Attribute, ClusterId, ClusterString, Kind, MessageString, SeatId, Status};
+use crate::builders::AttributeVec;
+use crate::types::{ClusterId, ClusterString, Kind, MessageString, SeatId, Status};
 use serde::{Deserialize, Serialize};
 
 // Type aliases for collections based on std/no_std
 #[cfg(feature = "std")]
-type SeatVec = std::vec::Vec<Seat>;
+pub type SeatVec = std::vec::Vec<Seat>;
 #[cfg(not(feature = "std"))]
-type SeatVec = heapless::Vec<Seat, { crate::constants::MAX_SEATS_PER_CLUSTER }>;
+pub type SeatVec = heapless::Vec<Seat, { crate::constants::MAX_SEATS_PER_CLUSTER }>;
 
 #[cfg(feature = "std")]
-type ZoneVec = std::vec::Vec<Zone>;
+pub type ZoneVec = std::vec::Vec<Zone>;
 #[cfg(not(feature = "std"))]
-type ZoneVec = heapless::Vec<Zone, { crate::constants::MAX_ZONES }>;
-
-#[cfg(feature = "std")]
-type AttributeVec = std::vec::Vec<Attribute>;
-#[cfg(not(feature = "std"))]
-type AttributeVec = heapless::Vec<Attribute, { crate::constants::MAX_ATTRIBUTES }>;
+pub type ZoneVec = heapless::Vec<Zone, { crate::constants::MAX_ZONES }>;
 
 #[doc = "`ClusterUpdate`"]
 #[derive(Deserialize, Serialize, Clone, Debug)]

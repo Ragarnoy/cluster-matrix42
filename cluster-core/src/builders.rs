@@ -1,25 +1,15 @@
 //! Builder pattern implementations for cluster data structures
 
-use crate::models::{Cluster, ClusterUpdate, Layout, Seat, Zone};
+use crate::models::{Cluster, ClusterUpdate, Layout, Seat, SeatVec, Zone, ZoneVec};
 use crate::types::{
     Attribute, ClusterId, ClusterString, Kind, MessageString, SeatId, Status, error,
 };
 
 // Re-import collection type aliases
 #[cfg(feature = "std")]
-type SeatVec = std::vec::Vec<Seat>;
+pub type AttributeVec = std::vec::Vec<Attribute>;
 #[cfg(not(feature = "std"))]
-type SeatVec = heapless::Vec<Seat, { crate::constants::MAX_SEATS_PER_CLUSTER }>;
-
-#[cfg(feature = "std")]
-type ZoneVec = std::vec::Vec<Zone>;
-#[cfg(not(feature = "std"))]
-type ZoneVec = heapless::Vec<Zone, { crate::constants::MAX_ZONES }>;
-
-#[cfg(feature = "std")]
-type AttributeVec = std::vec::Vec<Attribute>;
-#[cfg(not(feature = "std"))]
-type AttributeVec = heapless::Vec<Attribute, { crate::constants::MAX_ATTRIBUTES }>;
+pub type AttributeVec = heapless::Vec<Attribute, { crate::constants::MAX_ATTRIBUTES }>;
 
 use crate::types::error::ConversionError;
 #[cfg(feature = "std")]
