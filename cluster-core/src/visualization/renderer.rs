@@ -1,7 +1,7 @@
 //! Cluster visualization renderer
 
 use crate::constants::MAX_FLOORS;
-use crate::parsing::Cluster;
+use crate::models::Cluster;
 use crate::visualization::display::{DEFAULT_LAYOUT, DisplayLayout, visual};
 use core::fmt::Write;
 use embedded_graphics::mono_font::ascii::FONT_4X6;

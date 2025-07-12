@@ -1,6 +1,6 @@
-use cluster_core::parsing::{Attribute, Cluster, Kind, Layout, Seat, Status, Zone};
+use cluster_core::models::{Cluster, Layout, Seat, Zone};
+use cluster_core::types::{Attribute, Kind, Status};
 use cluster_core::visualization::draw_cluster_frame;
-// Your existing function
 use simulator::create_128x128_simulator;
 use std::vec;
 
