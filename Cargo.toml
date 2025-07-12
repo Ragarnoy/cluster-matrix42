@@ -3,10 +3,10 @@ resolver = "3"
 members = [
     "graphics-common",
     "cluster-core",
-    "applications/cluster-matrix",
+    "applications/cluster-matrix-app",
     "applications/simulator",
     "drivers/hub75-rp2350-driver",
-    # "drivers/hub75-driver",  # Temporarily disabled due to missing dependencies
+    # "drivers/hub75-driver",  #disabled
     "hardware-tests/basic-panel"
 ]
 

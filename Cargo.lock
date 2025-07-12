@@ -167,7 +167,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cluster-matrix"
+name = "cluster-matrix-app"
 version = "0.1.0"
 dependencies = [
  "cluster-core",
