@@ -42,8 +42,8 @@ impl ClusterRenderer {
 
         // Render each component
         Self::render_header(display, &cluster.message, frame)?;
-        self.render_floor_info(display, &cluster)?;
-        self.render_cluster::<D>(display, &cluster)?;
+        self.render_floor_info(display, cluster)?;
+        self.render_cluster::<D>(display, cluster)?;
         self.render_status_bar(display, 0)?;
 
         Ok(())
