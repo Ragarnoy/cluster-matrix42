@@ -4,7 +4,6 @@ use crate::builders::AttributeVec;
 use crate::types::{ClusterId, ClusterString, Kind, MessageString, SeatId, Status};
 use serde::{Deserialize, Serialize};
 
-// Type aliases for collections based on std/no_std
 #[cfg(feature = "std")]
 pub type SeatVec = std::vec::Vec<Seat>;
 #[cfg(not(feature = "std"))]
@@ -113,7 +112,7 @@ impl Cluster {
                 Status::Free => stats.available += 1,
                 Status::Taken => stats.occupied += 1,
                 Status::Broken => stats.out_of_order += 1,
-                Status::Reported => stats.reserved += 1,
+                Status::Reported => {}
             }
         }
 
