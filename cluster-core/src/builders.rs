@@ -21,6 +21,7 @@ type AttributeVec = std::vec::Vec<Attribute>;
 #[cfg(not(feature = "std"))]
 type AttributeVec = heapless::Vec<Attribute, { crate::constants::MAX_ATTRIBUTES }>;
 
+use crate::types::error::ConversionError;
 #[cfg(feature = "std")]
 use std::format;
 
@@ -180,51 +181,36 @@ impl ClusterUpdateBuilder {
 }
 
 impl TryFrom<ClusterUpdateBuilder> for ClusterUpdate {
-    type Error = error::ConversionError;
-    fn try_from(value: ClusterUpdateBuilder) -> Result<Self, error::ConversionError> {
+    type Error = ConversionError;
+    fn try_from(value: ClusterUpdateBuilder) -> Result<Self, ConversionError> {
         Ok(Self {
-            attributes: value.attributes.map_err(|e| {
-                #[cfg(feature = "std")]
-                {
-                    error::ConversionError::from(e)
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    error::ConversionError::from("builder error for attributes")
-                }
-            })?,
-            id: value.id.map_err(|e| {
-                #[cfg(feature = "std")]
-                {
-                    error::ConversionError::from(e)
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    error::ConversionError::from("builder error for id")
-                }
-            })?,
-            name: value.name.map_err(|e| {
-                #[cfg(feature = "std")]
-                {
-                    error::ConversionError::from(e)
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    error::ConversionError::from("builder error for name")
-                }
-            })?,
-            zones: value.zones.map_err(|e| {
-                #[cfg(feature = "std")]
-                {
-                    error::ConversionError::from(e)
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    error::ConversionError::from("builder error for zones")
-                }
-            })?,
+            attributes: value
+                .attributes
+                .map_err(|e| map_err_feature_agnostic(e, "builder error for attributes"))?,
+            id: value
+                .id
+                .map_err(|e| map_err_feature_agnostic(e, "builder error for id"))?,
+            name: value
+                .name
+                .map_err(|e| map_err_feature_agnostic(e, "builder error for name"))?,
+            zones: value
+                .zones
+                .map_err(|e| map_err_feature_agnostic(e, "builder error for zones"))?,
         })
     }
+}
+
+#[cfg(feature = "std")]
+fn map_err_feature_agnostic<E>(err: E, _fallback: &'static str) -> ConversionError
+where
+    ConversionError: From<E>,
+{
+    error::ConversionError::from(err)
+}
+
+#[cfg(not(feature = "std"))]
+fn map_err_feature_agnostic<E>(_err: E, fallback: &'static str) -> ConversionError {
+    error::ConversionError::from(fallback)
 }
 
 impl From<ClusterUpdate> for ClusterUpdateBuilder {
@@ -386,8 +372,8 @@ impl LayoutBuilder {
 }
 
 impl TryFrom<LayoutBuilder> for Layout {
-    type Error = error::ConversionError;
-    fn try_from(value: LayoutBuilder) -> Result<Self, error::ConversionError> {
+    type Error = ConversionError;
+    fn try_from(value: LayoutBuilder) -> Result<Self, ConversionError> {
         Ok(Self {
             f0: value.f0.map_err(|_e| {
                 #[cfg(feature = "std")]
@@ -594,8 +580,8 @@ impl ClusterBuilder {
 }
 
 impl TryFrom<ClusterBuilder> for Cluster {
-    type Error = error::ConversionError;
-    fn try_from(value: ClusterBuilder) -> Result<Self, error::ConversionError> {
+    type Error = ConversionError;
+    fn try_from(value: ClusterBuilder) -> Result<Self, ConversionError> {
         Ok(Self {
             message: value.message.map_err(|_e| {
                 #[cfg(feature = "std")]
@@ -790,8 +776,8 @@ impl SeatBuilder {
 }
 
 impl TryFrom<SeatBuilder> for Seat {
-    type Error = error::ConversionError;
-    fn try_from(value: SeatBuilder) -> Result<Self, error::ConversionError> {
+    type Error = ConversionError;
+    fn try_from(value: SeatBuilder) -> Result<Self, ConversionError> {
         Ok(Self {
             id: value.id.map_err(|_e| {
                 #[cfg(feature = "std")]
@@ -967,8 +953,8 @@ impl ZoneBuilder {
 }
 
 impl TryFrom<ZoneBuilder> for Zone {
-    type Error = error::ConversionError;
-    fn try_from(value: ZoneBuilder) -> Result<Self, error::ConversionError> {
+    type Error = ConversionError;
+    fn try_from(value: ZoneBuilder) -> Result<Self, ConversionError> {
         Ok(Self {
             attributes: value.attributes.map_err(|_e| {
                 #[cfg(feature = "std")]
