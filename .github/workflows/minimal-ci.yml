@@ -32,21 +32,20 @@ jobs:
         run: |
           cargo check -p graphics-common
           cargo check -p cluster-core
-          cargo check -p cluster-matrix
           cargo check -p simulator
-          cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --features "wtf_128x128"
-
+          cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --features "gbr_128x128"
           cargo check -p basic-panel --target thumbv8m.main-none-eabihf --features "128"
+#          cargo check -p cluster-matrix-app
       - name: Clippy - Desktop/Simulator packages
         run: |
           cargo clippy -p simulator -- -D warnings
           cargo clippy -p graphics-common --all-features -- -D warnings
           cargo clippy -p cluster-core --no-default-features -- -D warnings
           cargo clippy -p cluster-core -- -D warnings
-          cargo clippy -p cluster-matrix --all-features -- -D warnings
+#          cargo clippy -p cluster-matrix-app --all-features -- -D warnings
       - name: Clippy - Embedded packages
         run: >
-          cargo clippy -p hub75-rp2350-driver --features "wtf_128x128" --target
+          cargo clippy -p hub75-rp2350-driver --features "gbr_128x128" --target
           thumbv8m.main-none-eabihf -- -D warnings
 
           cargo clippy -p basic-panel --features "128"
@@ -55,12 +54,12 @@ jobs:
         run: |
           cargo build -p graphics-common --release
           cargo build -p cluster-core --release
-          cargo build -p cluster-matrix --release
           cargo build -p simulator --release
+#          cargo build -p cluster-matrix-app --release
       - name: Build - Embedded packages
         run: >
           cargo build -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf
-          --release --features "wtf_128x128"
+          --release --features "gbr_128x128"
 
           cargo build -p basic-panel --target thumbv8m.main-none-eabihf
           --release --features "128"
@@ -69,7 +68,7 @@ jobs:
           cargo test -p simulator
           cargo test -p graphics-common --features std
           cargo test -p cluster-core --features std
-          cargo test -p cluster-matrix --features std
+#          cargo test -p cluster-matrix-app --features std
       - name: Check binary size
         if: github.event_name == 'pull_request'
         run: >

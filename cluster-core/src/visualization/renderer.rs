@@ -1,11 +1,8 @@
 //! Cluster visualization renderer
 
 use crate::constants::MAX_FLOORS;
-use crate::shared::types::{Floor, Zone};
-use crate::visualization::{
-    cluster::{Cluster, ClusterLayout},
-    display::{DEFAULT_LAYOUT, DisplayLayout, visual},
-};
+use crate::parsing::Cluster;
+use crate::visualization::display::{DEFAULT_LAYOUT, DisplayLayout, visual};
 use core::fmt::Write;
 use embedded_graphics::mono_font::ascii::FONT_4X6;
 use embedded_graphics::{
@@ -31,25 +28,23 @@ impl ClusterRenderer {
     }
 
     /// Render a complete frame
-    pub fn render_frame<D, L>(
+    pub fn render_frame<D>(
         &self,
         display: &mut D,
-        cluster: &Cluster<L>,
-        motd: &str,
+        cluster: &Cluster,
         frame: u32,
     ) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
-        L: ClusterLayout,
     {
         // Clear display
         display.clear(visual::BACKGROUND)?;
 
         // Render each component
-        Self::render_header(display, motd, frame)?;
-        self.render_floor_info(display, cluster.floor)?;
-        self.render_cluster(display, cluster)?;
-        self.render_status_bar(display, cluster.occupancy_percentage())?;
+        Self::render_header(display, &cluster.message, frame)?;
+        self.render_floor_info(display, cluster)?;
+        self.render_cluster::<D>(display, cluster)?;
+        self.render_status_bar(display, 0)?;
 
         Ok(())
     }
@@ -80,7 +75,7 @@ impl ClusterRenderer {
         Ok(())
     }
 
-    fn render_floor_info<D>(&self, display: &mut D, floor: Floor) -> Result<(), D::Error>
+    fn render_floor_info<D>(&self, display: &mut D, _cluster: &Cluster) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
     {
@@ -91,11 +86,12 @@ impl ClusterRenderer {
             .draw(display)?;
 
         // Draw floor indicator bars
-        let bar_height = self.layout.floor_info.size.height / MAX_FLOORS;
-        let current_floor = floor as u32;
+        let bar_height = self.layout.floor_info.size.height / MAX_FLOORS as u32;
+        // TODO change to value from app state
+        let current_floor = 0;
 
         for i in 0..MAX_FLOORS {
-            let y = self.layout.floor_info.top_left.y + (i * bar_height) as i32;
+            let y = self.layout.floor_info.top_left.y + (i as u32 * bar_height) as i32;
             let color = if i == current_floor {
                 visual::FLOOR_ACTIVE
             } else {
@@ -128,12 +124,11 @@ impl ClusterRenderer {
         Ok(())
     }
 
-    fn render_cluster<D, L>(&self, display: &mut D, cluster: &Cluster<L>) -> Result<(), D::Error>
+    fn render_cluster<D>(&self, display: &mut D, cluster: &Cluster) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
-        L: ClusterLayout,
     {
-        let (grid_width, grid_height) = cluster.layout.grid_size();
+        let (grid_width, grid_height) = cluster.grid_size();
         let area_width = self.layout.cluster_area.size.width;
         let area_height = self.layout.cluster_area.size.height;
 
@@ -148,57 +143,44 @@ impl ClusterRenderer {
             + ((area_height.saturating_sub(total_height)) / 2) as i32;
 
         // Draw zone labels at the top
-        let zones = cluster.layout.zones();
-        for zone_info in zones {
-            let zone_center = (zone_info.start_col + zone_info.end_col) / 2;
-            let x =
-                offset_x + (zone_center as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32);
-            let y = offset_y - 8;
+        let zones = &cluster.zones;
+        let text_style = MonoTextStyle::new(&FONT_6X10, visual::TEXT_COLOR);
 
-            let zone_label = match zone_info.zone {
-                Zone::Z1 => "Z1",
-                Zone::Z2 => "Z2",
-                Zone::Z3 => "Z3",
-                Zone::Z4 => "Z4",
-            };
-
-            let text_style = MonoTextStyle::new(&FONT_6X10, visual::TEXT_COLOR);
-            Text::new(zone_label, Point::new(x, y + 6), text_style).draw(display)?;
+        for zone in zones {
+            Text::new(
+                &zone.name,
+                Point::new(zone.x as i32, zone.y as i32),
+                text_style,
+            )
+            .draw(display)?;
         }
 
         // Render each seat
-        for (index, seat) in cluster.seats.iter().enumerate() {
-            if let Some(pos) = cluster.layout.seat_position(index) {
-                let x =
-                    offset_x + (pos.x as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32);
-                let y =
-                    offset_y + (pos.y as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32);
-
-                Rectangle::new(
-                    Point::new(x, y),
-                    Size::new(visual::SEAT_SIZE, visual::SEAT_SIZE),
-                )
-                .into_styled(PrimitiveStyle::with_fill(seat.color()))
-                .draw(display)?;
-            }
+        for seat in &cluster.seats {
+            Rectangle::new(
+                Point::new(seat.x as i32 + offset_x, seat.y as i32 + offset_y),
+                Size::new(visual::SEAT_SIZE, visual::SEAT_SIZE),
+            )
+            .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
+            .draw(display)?;
         }
 
-        // Draw zone separators (vertical lines between zones)
-        for zone in zones.iter().take(zones.len().saturating_sub(1)) {
-            let gap_x = zone.end_col + 1;
-            let x = offset_x + (gap_x as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32)
-                - (visual::ZONE_GAP / 2) as i32;
-
-            for y_grid in 0..grid_height {
-                let y =
-                    offset_y + (y_grid as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32);
-
-                // Draw a vertical separator line
-                Rectangle::new(Point::new(x, y), Size::new(1, visual::SEAT_SIZE))
-                    .into_styled(PrimitiveStyle::with_fill(visual::ZONE_SEPARATOR))
-                    .draw(display)?;
-            }
-        }
+        // // Draw zone separators (vertical lines between zones)
+        // for zone in zones.iter().take(zones.len().saturating_sub(1)) {
+        //     let gap_x = zone.end_col + 1;
+        //     let x = offset_x + (gap_x as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32)
+        //         - (visual::ZONE_GAP / 2) as i32;
+        //
+        //     for y_grid in 0..grid_height {
+        //         let y =
+        //             offset_y + (y_grid as i32 * (visual::SEAT_SIZE + visual::SEAT_SPACING) as i32);
+        //
+        //         // Draw a vertical separator line
+        //         Rectangle::new(Point::new(x, y), Size::new(1, visual::SEAT_SIZE))
+        //             .into_styled(PrimitiveStyle::with_fill(visual::ZONE_SEPARATOR))
+        //             .draw(display)?;
+        //     }
+        // }
 
         Ok(())
     }

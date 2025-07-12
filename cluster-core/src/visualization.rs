@@ -14,20 +14,15 @@ pub use layouts::{CustomLayout, GridLayout};
 pub use renderer::ClusterRenderer;
 
 // Re-export layout presets
+use crate::parsing::Layout;
 pub use layouts::presets;
 pub use seats::{Seat, SeatState, SeatType};
 
 /// Draw a cluster visualization frame
-pub fn draw_cluster_frame<D, L>(
-    display: &mut D,
-    cluster: &Cluster<L>,
-    motd: &str,
-    frame: u32,
-) -> Result<(), D::Error>
+pub fn draw_cluster_frame<D>(display: &mut D, cluster: &Layout, frame: u32) -> Result<(), D::Error>
 where
     D: DrawTarget<Color = Rgb565>,
-    L: ClusterLayout,
 {
     let renderer = ClusterRenderer::new();
-    renderer.render_frame(display, cluster, motd, frame)
+    renderer.render_frame::<D>(display, &cluster.f0, frame)
 }

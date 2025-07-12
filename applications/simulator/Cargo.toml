@@ -9,5 +9,5 @@ embedded-graphics-simulator = "0.7.0"
 embedded-graphics = { workspace = true }
 
 # Shared animation logic
-cluster-core = { workspace = true }
+cluster-core = { workspace = true, features = ["std"] }
 graphics-common = { workspace = true }
