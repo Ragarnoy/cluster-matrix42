@@ -9,12 +9,61 @@ use embedded_graphics::{
 pub const DISPLAY_WIDTH: u32 = 128;
 pub const DISPLAY_HEIGHT: u32 = 128;
 
-/// Layout region heights
-pub const HEADER_HEIGHT: u32 = 8;
-pub const STATUS_BAR_HEIGHT: u32 = 8;
-pub const FLOOR_INFO_WIDTH: u32 = 16;
+/// Header/MOTD constants
+pub const HEADER_TOP_MARGIN: u32 = 2;
+pub const MOTD_LINE_HEIGHT: u32 = 7;
+pub const MOTD_LINE_SPACING: u32 = 2;
+pub const MOTD_MAX_LINES: u32 = 3;
+pub const HEADER_HEIGHT: u32 = HEADER_TOP_MARGIN
+    + (MOTD_MAX_LINES * MOTD_LINE_HEIGHT)
+    + ((MOTD_MAX_LINES - 1) * MOTD_LINE_SPACING); // 27px
 
-/// Main display layout regions for the 64x64 matrix
+/// Spacing from header to other elements
+pub const HEADER_TO_FLOOR_TEXT_GAP: u32 = 7;
+pub const HEADER_TO_CLUSTER_GAP: u32 = 18;
+
+/// Floor info constants
+pub const FLOOR_INFO_LEFT_MARGIN: u32 = 5;
+pub const FLOOR_INFO_WIDTH: u32 = 30; // Estimated based on typical floor indicator size
+pub const FLOOR_TEXT_TO_BARS_GAP: u32 = 5;
+pub const FLOOR_BAR_SPACING: u32 = 3;
+pub const FLOOR_INDICATOR_COUNT: usize = 6; // F0, F1, F1B, F2, F3, F4, F5
+pub const ZONE_TEXT_Y_OFFSET: i32 = 4; // Offset to prevent clipping into seats
+pub const SPLIT_FLOOR_GAP: u32 = 2; // Gap between F1 and F1B rectangles
+
+/// Cluster area constants
+pub const FLOOR_INFO_TO_CLUSTER_GAP: u32 = 6;
+pub const CLUSTER_RIGHT_MARGIN: u32 = 6;
+
+/// Status bar constants
+pub const STATUS_BAR_HEIGHT: u32 = 8; // Estimated from image
+pub const STATUS_BAR_BOTTOM_MARGIN: u32 = 3;
+pub const STATUS_BAR_SIDE_MARGIN: u32 = 3;
+pub const FLOOR_TO_STATUS_GAP: u32 = 14;
+
+/// Calculated positions
+pub const FLOOR_TEXT_Y: u32 = HEADER_HEIGHT + HEADER_TO_FLOOR_TEXT_GAP;
+pub const CLUSTER_AREA_Y: u32 = HEADER_HEIGHT + HEADER_TO_CLUSTER_GAP;
+pub const FLOOR_BARS_Y: u32 = FLOOR_TEXT_Y + MOTD_LINE_HEIGHT + FLOOR_TEXT_TO_BARS_GAP;
+pub const CLUSTER_AREA_X: u32 =
+    FLOOR_INFO_LEFT_MARGIN + FLOOR_INFO_WIDTH + FLOOR_INFO_TO_CLUSTER_GAP;
+pub const CLUSTER_AREA_WIDTH: u32 = DISPLAY_WIDTH - CLUSTER_AREA_X - CLUSTER_RIGHT_MARGIN;
+
+/// Status bar positioning
+pub const STATUS_BAR_Y: u32 = DISPLAY_HEIGHT - STATUS_BAR_HEIGHT - STATUS_BAR_BOTTOM_MARGIN;
+pub const STATUS_BAR_CONTENT_Y: u32 = FLOOR_BARS_Y
+    + (FLOOR_INDICATOR_COUNT as u32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING))
+    + FLOOR_TO_STATUS_GAP;
+
+/// Derived cluster area height
+pub const CLUSTER_AREA_HEIGHT: u32 = STATUS_BAR_Y - CLUSTER_AREA_Y;
+
+/// Text positioning helpers
+pub const MOTD_TEXT_Y: i32 = (HEADER_TOP_MARGIN + MOTD_LINE_HEIGHT - 1) as i32; // Baseline position
+pub const FLOOR_TEXT_X: i32 = (FLOOR_INFO_LEFT_MARGIN + 2) as i32;
+pub const FLOOR_TEXT_BASELINE_Y: i32 = (FLOOR_TEXT_Y + MOTD_LINE_HEIGHT - 1) as i32; // Baseline position
+
+/// Main display layout regions for the 128x128 matrix
 #[derive(Clone, Copy, Debug)]
 pub struct DisplayLayout {
     pub header: Rectangle,       // MOTD area
@@ -28,22 +77,19 @@ impl DisplayLayout {
         Self {
             header: Rectangle::new(Point::new(0, 0), Size::new(DISPLAY_WIDTH, HEADER_HEIGHT)),
             floor_info: Rectangle::new(
-                Point::new(0, HEADER_HEIGHT as i32),
-                Size::new(
-                    FLOOR_INFO_WIDTH,
-                    DISPLAY_HEIGHT - HEADER_HEIGHT - STATUS_BAR_HEIGHT,
-                ),
+                Point::new(FLOOR_INFO_LEFT_MARGIN as i32, FLOOR_TEXT_Y as i32),
+                Size::new(FLOOR_INFO_WIDTH, STATUS_BAR_Y - FLOOR_TEXT_Y),
             ),
             cluster_area: Rectangle::new(
-                Point::new(FLOOR_INFO_WIDTH as i32, HEADER_HEIGHT as i32),
-                Size::new(
-                    DISPLAY_WIDTH - FLOOR_INFO_WIDTH,
-                    DISPLAY_HEIGHT - HEADER_HEIGHT - STATUS_BAR_HEIGHT,
-                ),
+                Point::new(CLUSTER_AREA_X as i32, CLUSTER_AREA_Y as i32),
+                Size::new(CLUSTER_AREA_WIDTH, CLUSTER_AREA_HEIGHT),
             ),
             status_bar: Rectangle::new(
-                Point::new(0, (DISPLAY_HEIGHT - STATUS_BAR_HEIGHT) as i32),
-                Size::new(DISPLAY_WIDTH, STATUS_BAR_HEIGHT),
+                Point::new(STATUS_BAR_SIDE_MARGIN as i32, STATUS_BAR_Y as i32),
+                Size::new(
+                    DISPLAY_WIDTH - (2 * STATUS_BAR_SIDE_MARGIN),
+                    STATUS_BAR_HEIGHT,
+                ),
             ),
         }
     }
@@ -71,7 +117,9 @@ pub mod visual {
     /// UI element colors
     pub const TEXT_COLOR: Rgb565 = Rgb565::WHITE;
     pub const FLOOR_INACTIVE: Rgb565 = Rgb565::CSS_GRAY;
-    pub const FLOOR_ACTIVE: Rgb565 = Rgb565::WHITE;
+    pub const FLOOR_SELECTED: Rgb565 = Rgb565::WHITE;
+    pub const FLOOR_UNSELECTED: Rgb565 = Rgb565::WHITE;
+    pub const FLOOR_OCCUPANCY_BAR: Rgb565 = Rgb565::WHITE;
     pub const ZONE_SEPARATOR: Rgb565 = Rgb565::YELLOW;
 
     /// Status bar colors
@@ -82,6 +130,5 @@ pub mod visual {
 
     /// Seat rendering constants
     pub const SEAT_SIZE: u32 = 2;
-    pub const SEAT_SPACING: u32 = 2;
     pub const ZONE_GAP: u32 = 4;
 }
