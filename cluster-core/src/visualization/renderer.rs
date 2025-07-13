@@ -5,7 +5,8 @@ use crate::types::{Kind, Status};
 use crate::visualization::display::{
     DEFAULT_LAYOUT, DISPLAY_WIDTH, DisplayLayout, FLOOR_BAR_SPACING, FLOOR_BARS_Y,
     FLOOR_INDICATOR_COUNT, FLOOR_INFO_LEFT_MARGIN, FLOOR_INFO_WIDTH, FLOOR_TEXT_BASELINE_Y,
-    FLOOR_TEXT_X, MOTD_LINE_HEIGHT, MOTD_TEXT_Y, STATUS_BAR_HEIGHT, STATUS_BAR_SIDE_MARGIN, visual,
+    FLOOR_TEXT_X, MOTD_LINE_HEIGHT, MOTD_TEXT_Y, SPLIT_FLOOR_GAP, STATUS_BAR_HEIGHT,
+    STATUS_BAR_SIDE_MARGIN, ZONE_TEXT_Y_OFFSET, visual,
 };
 use core::fmt::Write;
 use embedded_graphics::mono_font::ascii::FONT_4X6;
@@ -100,27 +101,108 @@ impl ClusterRenderer {
         )
         .draw(display)?;
 
-        // Draw floor indicator bars
-        let current_floor = 0; // TODO: change to value from app state
-        // let floor_names = ["F0", "F1", "F1B", "F2", "F4"]; // Adjust based on your floors
+        // Floor data: (name, is_active, occupancy_percentage, is_selected, is_split)
+        let floors = [
+            ("F0", true, 65u8, true, false),  // Bottom floor (index 0) - selected
+            ("F1", true, 45u8, false, true),  // Split floor - F1 part
+            ("F2", true, 30u8, false, false), // Regular unselected floor
+            ("F3", false, 0u8, false, false), // Inactive (grey)
+            ("F4", true, 55u8, false, false), // Regular unselected floor
+            ("F5", false, 0u8, false, false), // Inactive (grey)
+        ];
 
+        // F1B data (for the split floor)
+        let f1b_occupancy = 80u8;
+
+        // Draw floor indicator bars (F0 at bottom, others going up)
         for i in 0..FLOOR_INDICATOR_COUNT {
+            // Reverse the index so F0 is at the bottom
+            let floor_index = FLOOR_INDICATOR_COUNT - 1 - i;
             let y =
                 FLOOR_BARS_Y as i32 + (i as i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32);
 
-            let style = if i == current_floor {
-                PrimitiveStyle::with_fill(visual::FLOOR_SELECTED)
-            } else {
-                PrimitiveStyle::with_stroke(visual::FLOOR_UNSELECTED, 1)
-            };
+            let (_floor_name, is_active, occupancy, is_selected, is_split) = floors[floor_index];
 
-            // Draw floor bar with precise positioning
-            Rectangle::new(
-                Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
-                Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
-            )
-            .into_styled(style)
-            .draw(display)?;
+            if is_split {
+                // Special handling for F1/F1B split floor
+                let left_width = ((FLOOR_INFO_WIDTH - SPLIT_FLOOR_GAP) * 60) / 100;
+                let right_width = FLOOR_INFO_WIDTH - SPLIT_FLOOR_GAP - left_width;
+
+                // Draw F1 (left rectangle)
+                Rectangle::new(
+                    Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
+                    Size::new(left_width, MOTD_LINE_HEIGHT),
+                )
+                .into_styled(PrimitiveStyle::with_stroke(visual::FLOOR_UNSELECTED, 1))
+                .draw(display)?;
+
+                // F1 occupancy bar
+                let f1_bar_width = ((left_width - 4) * occupancy as u32) / 100;
+                if f1_bar_width > 0 {
+                    Rectangle::new(
+                        Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 2, y + 2),
+                        Size::new(f1_bar_width, MOTD_LINE_HEIGHT - 4),
+                    )
+                    .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
+                    .draw(display)?;
+                }
+
+                // Draw F1B (right rectangle)
+                let f1b_x =
+                    FLOOR_INFO_LEFT_MARGIN as i32 + left_width as i32 + SPLIT_FLOOR_GAP as i32;
+                Rectangle::new(
+                    Point::new(f1b_x, y),
+                    Size::new(right_width, MOTD_LINE_HEIGHT),
+                )
+                .into_styled(PrimitiveStyle::with_stroke(visual::FLOOR_UNSELECTED, 1))
+                .draw(display)?;
+
+                // F1B occupancy bar
+                let f1b_bar_width = ((right_width - 4) * f1b_occupancy as u32) / 100;
+                if f1b_bar_width > 0 {
+                    Rectangle::new(
+                        Point::new(f1b_x + 2, y + 2),
+                        Size::new(f1b_bar_width, MOTD_LINE_HEIGHT - 4),
+                    )
+                    .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
+                    .draw(display)?;
+                }
+            } else if !is_active {
+                // Inactive floor - grey filled rectangle
+                Rectangle::new(
+                    Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
+                    Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
+                )
+                .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_INACTIVE))
+                .draw(display)?;
+            } else if is_selected {
+                // Selected floor - white filled rectangle
+                Rectangle::new(
+                    Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
+                    Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
+                )
+                .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_SELECTED))
+                .draw(display)?;
+            } else {
+                // Unselected active floor - white outline with occupancy bar inside
+                Rectangle::new(
+                    Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
+                    Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
+                )
+                .into_styled(PrimitiveStyle::with_stroke(visual::FLOOR_UNSELECTED, 1))
+                .draw(display)?;
+
+                // Draw occupancy bar inside the hollow rectangle
+                let bar_width = ((FLOOR_INFO_WIDTH - 4) * occupancy as u32) / 100; // Leave 2px margin on each side
+                if bar_width > 0 {
+                    Rectangle::new(
+                        Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 2, y + 2),
+                        Size::new(bar_width, MOTD_LINE_HEIGHT - 4), // Leave 2px margin top/bottom
+                    )
+                    .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
+                    .draw(display)?;
+                }
+            }
         }
 
         Ok(())
@@ -205,7 +287,7 @@ impl ClusterRenderer {
                 &zone.name,
                 Point::new(
                     self.layout.cluster_area.top_left.x + zone.x as i32,
-                    self.layout.cluster_area.top_left.y + zone.y as i32 - 4,
+                    self.layout.cluster_area.top_left.y + zone.y as i32 - ZONE_TEXT_Y_OFFSET,
                 ),
                 text_style,
             )
