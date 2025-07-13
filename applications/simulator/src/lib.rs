@@ -148,6 +148,7 @@ pub fn create_hub75_simulator(size: Size) -> Result<Simulator, String> {
     let config = SimulatorConfig {
         size,
         title: format!("Hub75 Matrix Simulator ({}x{})", size.width, size.height),
+        scale: 6,
         ..Default::default()
     };
     Simulator::new(config)

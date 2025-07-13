@@ -653,8 +653,8 @@ fn create_sample_layout() -> Result<Layout, Box<dyn std::error::Error>> {
     let zones = vec![
         Zone {
             attributes: vec![],
-            name: "".to_string(),
-            x: 0,
+            name: "Z0".to_string(),
+            x: 4,
             y: 0,
         },
         Zone {
