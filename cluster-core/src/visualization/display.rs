@@ -27,7 +27,7 @@ pub const FLOOR_INFO_LEFT_MARGIN: u32 = 5;
 pub const FLOOR_INFO_WIDTH: u32 = 30; // Estimated based on typical floor indicator size
 pub const FLOOR_TEXT_TO_BARS_GAP: u32 = 5;
 pub const FLOOR_BAR_SPACING: u32 = 3;
-pub const FLOOR_INDICATOR_COUNT: usize = 6; // F0, F1, F1B, F2, F3, F4, F5
+pub const FLOOR_INDICATOR_COUNT: usize = 7; // F0, F1, F1B, F2, F3, F4, F5
 pub const ZONE_TEXT_Y_OFFSET: i32 = 4; // Offset to prevent clipping into seats
 pub const SPLIT_FLOOR_GAP: u32 = 2; // Gap between F1 and F1B rectangles
 
@@ -118,7 +118,7 @@ pub mod visual {
     pub const TEXT_COLOR: Rgb565 = Rgb565::WHITE;
     pub const FLOOR_INACTIVE: Rgb565 = Rgb565::CSS_GRAY;
     pub const FLOOR_SELECTED: Rgb565 = Rgb565::WHITE;
-    pub const FLOOR_UNSELECTED: Rgb565 = Rgb565::WHITE;
+    pub const FLOOR_UNSELECTED: Rgb565 = Rgb565::CSS_DARK_GRAY;
     pub const FLOOR_OCCUPANCY_BAR: Rgb565 = Rgb565::WHITE;
     pub const ZONE_SEPARATOR: Rgb565 = Rgb565::YELLOW;
 

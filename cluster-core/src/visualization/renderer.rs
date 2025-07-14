@@ -108,6 +108,7 @@ impl ClusterRenderer {
             ("F3", false, 0u8, false, false), // Inactive (grey)
             ("F4", true, 55u8, false, false), // Regular unselected floor
             ("F5", false, 0u8, false, false), // Inactive (grey)
+            ("F6", true, 80u8, false, false), // Regular unselected floor
         ];
 
         // F1B data (for the split floor)
@@ -121,6 +122,11 @@ impl ClusterRenderer {
                 FLOOR_BARS_Y as i32 + (i as i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32);
 
             let (_floor_name, is_active, occupancy, is_selected, is_split) = floors[floor_index];
+            let bar_color = if is_selected {
+                visual::FLOOR_SELECTED
+            } else {
+                visual::FLOOR_UNSELECTED
+            };
 
             if is_split {
                 // Special handling for F1/F1B split floor
@@ -132,7 +138,7 @@ impl ClusterRenderer {
                     Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
                     Size::new(left_width, MOTD_LINE_HEIGHT),
                 )
-                .into_styled(PrimitiveStyle::with_stroke(visual::FLOOR_UNSELECTED, 1))
+                .into_styled(PrimitiveStyle::with_stroke(bar_color, 1))
                 .draw(display)?;
 
                 // F1 occupancy bar
@@ -142,7 +148,7 @@ impl ClusterRenderer {
                         Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 1, y + 1),
                         Size::new(f1_bar_width, MOTD_LINE_HEIGHT - 2),
                     )
-                    .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
+                    .into_styled(PrimitiveStyle::with_fill(bar_color))
                     .draw(display)?;
                 }
 
@@ -153,7 +159,7 @@ impl ClusterRenderer {
                     Point::new(f1b_x, y),
                     Size::new(right_width, MOTD_LINE_HEIGHT),
                 )
-                .into_styled(PrimitiveStyle::with_stroke(visual::FLOOR_UNSELECTED, 1))
+                .into_styled(PrimitiveStyle::with_stroke(bar_color, 1))
                 .draw(display)?;
 
                 // F1B occupancy bar
@@ -163,7 +169,7 @@ impl ClusterRenderer {
                         Point::new(f1b_x + 1, y + 1),
                         Size::new(f1b_bar_width, MOTD_LINE_HEIGHT - 2),
                     )
-                    .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
+                    .into_styled(PrimitiveStyle::with_fill(bar_color))
                     .draw(display)?;
                 }
             } else if !is_active {
@@ -174,21 +180,13 @@ impl ClusterRenderer {
                 )
                 .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_INACTIVE))
                 .draw(display)?;
-            } else if is_selected {
-                // Selected floor - white filled rectangle
-                Rectangle::new(
-                    Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
-                    Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
-                )
-                .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_SELECTED))
-                .draw(display)?;
             } else {
                 // Unselected active floor - white outline with occupancy bar inside
                 Rectangle::new(
                     Point::new(FLOOR_INFO_LEFT_MARGIN as i32, y),
                     Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
                 )
-                .into_styled(PrimitiveStyle::with_stroke(visual::FLOOR_UNSELECTED, 1))
+                .into_styled(PrimitiveStyle::with_stroke(bar_color, 1))
                 .draw(display)?;
 
                 // Draw occupancy bar inside the hollow rectangle
@@ -198,7 +196,7 @@ impl ClusterRenderer {
                         Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 1, y + 1),
                         Size::new(bar_width, MOTD_LINE_HEIGHT - 2), // Leave 2px margin top/bottom
                     )
-                    .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
+                    .into_styled(PrimitiveStyle::with_fill(bar_color))
                     .draw(display)?;
                 }
             }
@@ -240,13 +238,6 @@ impl ClusterRenderer {
             .into_styled(PrimitiveStyle::with_fill(fill_color))
             .draw(display)?;
         }
-
-        // Draw occupancy percentage text
-        let mut percentage_text = String::<8>::new();
-        write!(&mut percentage_text, "{occupancy}").unwrap();
-        let mut full_text = percentage_text;
-        let _ = full_text.push('%');
-
         Ok(())
     }
 
