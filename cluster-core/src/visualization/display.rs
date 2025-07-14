@@ -61,7 +61,7 @@ pub const CLUSTER_AREA_HEIGHT: u32 = STATUS_BAR_Y - CLUSTER_AREA_Y;
 /// Text positioning helpers
 pub const MOTD_TEXT_Y: i32 = (HEADER_TOP_MARGIN + MOTD_LINE_HEIGHT - 1) as i32; // Baseline position
 pub const FLOOR_TEXT_X: i32 = (FLOOR_INFO_LEFT_MARGIN + 2) as i32;
-pub const FLOOR_TEXT_BASELINE_Y: i32 = (FLOOR_TEXT_Y + MOTD_LINE_HEIGHT - 1) as i32; // Baseline position
+pub const FLOOR_TEXT_BASELINE_Y: i32 = (FLOOR_TEXT_Y + MOTD_LINE_HEIGHT) as i32; // Baseline position
 
 /// Main display layout regions for the 128x128 matrix
 #[derive(Clone, Copy, Debug)]
@@ -123,7 +123,7 @@ pub mod visual {
     pub const ZONE_SEPARATOR: Rgb565 = Rgb565::YELLOW;
 
     /// Status bar colors
-    pub const STATUS_BAR_BG: Rgb565 = Rgb565::new(8, 8, 8);
+    pub const STATUS_BAR_BG: Rgb565 = Rgb565::CSS_GRAY;
     pub const OCCUPANCY_LOW: Rgb565 = Rgb565::GREEN;
     pub const OCCUPANCY_MEDIUM: Rgb565 = Rgb565::YELLOW;
     pub const OCCUPANCY_HIGH: Rgb565 = Rgb565::RED;

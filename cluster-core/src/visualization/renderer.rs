@@ -9,7 +9,6 @@ use crate::visualization::display::{
     STATUS_BAR_SIDE_MARGIN, ZONE_TEXT_Y_OFFSET, visual,
 };
 use core::fmt::Write;
-use embedded_graphics::mono_font::ascii::FONT_4X6;
 use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::Rgb565,
@@ -93,7 +92,7 @@ impl ClusterRenderer {
         // Draw current floor text
         let mut floor_num: String<3> = String::new();
         write!(&mut floor_num, "F{}", 0).unwrap();
-        let text_style = MonoTextStyle::new(&FONT_4X6, visual::TEXT_COLOR);
+        let text_style = MonoTextStyle::new(&FONT_6X10, visual::TEXT_COLOR);
         Text::new(
             &floor_num,
             Point::new(FLOOR_TEXT_X, FLOOR_TEXT_BASELINE_Y),
@@ -140,8 +139,8 @@ impl ClusterRenderer {
                 let f1_bar_width = ((left_width - 4) * occupancy as u32) / 100;
                 if f1_bar_width > 0 {
                     Rectangle::new(
-                        Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 2, y + 2),
-                        Size::new(f1_bar_width, MOTD_LINE_HEIGHT - 4),
+                        Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 1, y + 1),
+                        Size::new(f1_bar_width, MOTD_LINE_HEIGHT - 2),
                     )
                     .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
                     .draw(display)?;
@@ -161,8 +160,8 @@ impl ClusterRenderer {
                 let f1b_bar_width = ((right_width - 4) * f1b_occupancy as u32) / 100;
                 if f1b_bar_width > 0 {
                     Rectangle::new(
-                        Point::new(f1b_x + 2, y + 2),
-                        Size::new(f1b_bar_width, MOTD_LINE_HEIGHT - 4),
+                        Point::new(f1b_x + 1, y + 1),
+                        Size::new(f1b_bar_width, MOTD_LINE_HEIGHT - 2),
                     )
                     .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
                     .draw(display)?;
@@ -196,8 +195,8 @@ impl ClusterRenderer {
                 let bar_width = ((FLOOR_INFO_WIDTH - 4) * occupancy as u32) / 100; // Leave 2px margin on each side
                 if bar_width > 0 {
                     Rectangle::new(
-                        Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 2, y + 2),
-                        Size::new(bar_width, MOTD_LINE_HEIGHT - 4), // Leave 2px margin top/bottom
+                        Point::new(FLOOR_INFO_LEFT_MARGIN as i32 + 1, y + 1),
+                        Size::new(bar_width, MOTD_LINE_HEIGHT - 2), // Leave 2px margin top/bottom
                     )
                     .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_OCCUPANCY_BAR))
                     .draw(display)?;
@@ -247,17 +246,6 @@ impl ClusterRenderer {
         write!(&mut percentage_text, "{occupancy}").unwrap();
         let mut full_text = percentage_text;
         let _ = full_text.push('%');
-
-        let text_style = MonoTextStyle::new(&FONT_6X10, visual::TEXT_COLOR);
-        Text::new(
-            &full_text,
-            Point::new(
-                self.layout.status_bar.top_left.x + bar_area_width as i32 - 20, // Right-aligned with margin
-                self.layout.status_bar.top_left.y + STATUS_BAR_HEIGHT as i32 - 2, // Bottom-aligned
-            ),
-            text_style,
-        )
-        .draw(display)?;
 
         Ok(())
     }
