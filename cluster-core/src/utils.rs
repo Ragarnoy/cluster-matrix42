@@ -62,7 +62,7 @@ macro_rules! zone {
 /// Create a cluster with the given parameters
 ///
 /// # Example
-/// ```
+/// ```no_run
 /// use cluster_core::{cluster, seat, zone, types::{Kind, Status, Attribute}};
 ///
 /// let c = cluster! {
@@ -72,14 +72,15 @@ macro_rules! zone {
 ///     seats: [
 ///         seat!("f0r1s1", Kind::Mac, Status::Free, 0, 0),
 ///         seat!("f0r1s2", Kind::Mac, Status::Taken, 3, 1),
-///     ],
+///     ].into(),
 ///     zones: [
 ///         zone!("Z1", [Attribute::Silent], 4, 0),
-///     ]
+///     ].into()
 /// };
 /// ```
 #[macro_export]
 macro_rules! cluster {
+    // Variant 1: Literal arrays
     {
         message: $message:expr,
         name: $name:expr,
@@ -134,6 +135,53 @@ macro_rules! cluster {
             },
         }
     };
+
+    // Variant 2: Variables (for when you have dynamic collections)
+    {
+        message: $message:expr,
+        name: $name:expr,
+        attributes: [$($attr:expr),*],
+        seats: $seats:expr,
+        zones: $zones:expr
+    } => {
+        $crate::models::Cluster {
+            message: $message.try_into().expect("Invalid message"),
+            name: $name.try_into().expect("Invalid cluster name"),
+            attributes: {
+                #[cfg(feature = "std")]
+                {
+                    std::vec![$($attr),*]
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    {
+                        let mut attrs = heapless::Vec::new();
+                        $(attrs.push($attr).expect("Too many attributes");)*
+                        attrs
+                    }
+                }
+            },
+            seats: $seats,
+            zones: $zones,
+        }
+    };
+
+    // Variant 3: All variables
+    {
+        message: $message:expr,
+        name: $name:expr,
+        attributes: $attributes:expr,
+        seats: $seats:expr,
+        zones: $zones:expr
+    } => {
+        $crate::models::Cluster {
+            message: $message.try_into().expect("Invalid message"),
+            name: $name.try_into().expect("Invalid cluster name"),
+            attributes: $attributes,
+            seats: $seats,
+            zones: $zones,
+        }
+    };
 }
 
 /// Create an empty cluster with the given name
@@ -147,12 +195,39 @@ macro_rules! cluster {
 #[macro_export]
 macro_rules! empty_cluster {
     ($name:expr) => {
-        $crate::cluster! {
-            message: "",
-            name: $name,
-            attributes: [],
-            seats: [],
-            zones: []
+        $crate::models::Cluster {
+            message: "".try_into().expect("Invalid empty message"),
+            name: $name.try_into().expect("Invalid cluster name"),
+            attributes: {
+                #[cfg(feature = "std")]
+                {
+                    std::vec::Vec::new()
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    heapless::Vec::new()
+                }
+            },
+            seats: {
+                #[cfg(feature = "std")]
+                {
+                    std::vec::Vec::new()
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    heapless::Vec::new()
+                }
+            },
+            zones: {
+                #[cfg(feature = "std")]
+                {
+                    std::vec::Vec::new()
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    heapless::Vec::new()
+                }
+            },
         }
     };
 }
@@ -160,7 +235,7 @@ macro_rules! empty_cluster {
 /// Create a layout from the given clusters
 ///
 /// # Example
-/// ```
+/// ```no_run
 /// use cluster_core::{layout, empty_cluster, cluster, seat, types::{Kind, Status}};
 ///
 /// let l = layout! {
@@ -208,30 +283,30 @@ macro_rules! layout {
 /// use cluster_core::{seats, types::{Kind, Status}};
 ///
 /// // Create a row of 6 Mac seats, alternating Free/Taken status
-/// let row1 = seats![
+/// let row1 = seats! {
 ///     pattern: "f0r1s{}", 1..=6;
 ///     kind: Kind::Mac;
 ///     status: [Status::Free, Status::Taken]; // Alternates
 ///     positions: (0, 0), (3, 1), (6, 0), (9, 1), (12, 0), (15, 1)
-/// ];
+/// };
 ///
 /// // Create seats with same status
-/// let row2 = seats![
+/// let row2 = seats! {
 ///     pattern: "f0r2s{}", 1..=4;
 ///     kind: Kind::Mac;
 ///     status: Status::Free; // All same
 ///     positions: (0, 5), (3, 5), (6, 5), (9, 5)
-/// ];
+/// };
 /// ```
 #[macro_export]
 macro_rules! seats {
     // Pattern with alternating status
-    [
+    {
         pattern: $pattern:expr, $range:expr;
         kind: $kind:expr;
         status: [$($status:expr),+];
         positions: $(($x:expr, $y:expr)),+
-    ] => {
+    } => {
         {
             let positions = [$(($x, $y)),+];
             let statuses = [$($status),+];
@@ -245,9 +320,7 @@ macro_rules! seats {
             for (i, (x, y)) in positions.iter().enumerate() {
                 let id = {
                     #[cfg(feature = "std")]
-                    {
-                        use std::format;
-                        format!($pattern, $range.start() + i) }
+                    { std::format!($pattern, $range.start() + i) }
                     #[cfg(not(feature = "std"))]
                     {
                         let mut s = heapless::String::<16>::new();
@@ -267,12 +340,12 @@ macro_rules! seats {
     };
 
     // Pattern with same status for all
-    [
+    {
         pattern: $pattern:expr, $range:expr;
         kind: $kind:expr;
         status: $status:expr;
         positions: $(($x:expr, $y:expr)),+
-    ] => {
+    } => {
         {
             let positions = [$(($x, $y)),+];
             let mut seats = {
@@ -285,9 +358,7 @@ macro_rules! seats {
             for (i, (x, y)) in positions.iter().enumerate() {
                 let id = {
                     #[cfg(feature = "std")]
-                    {
-                        use std::format;
-                        format!($pattern, $range.start() + i) }
+                    { std::format!($pattern, $range.start() + i) }
                     #[cfg(not(feature = "std"))]
                     {
                         let mut s = heapless::String::<16>::new();
@@ -312,12 +383,12 @@ macro_rules! seats {
 /// ```
 /// use cluster_core::{seats, extend_seats, seat, types::{Kind, Status}};
 ///
-/// let mut all_seats = seats![
+/// let mut all_seats = seats! {
 ///     pattern: "f0r1s{}", 1..=3;
 ///     kind: Kind::Mac;
 ///     status: Status::Free;
 ///     positions: (0, 0), (3, 0), (6, 0)
-/// ];
+/// };
 ///
 /// extend_seats!(all_seats, [
 ///     seat!("f0r1s4", Kind::Flex, Status::Taken, 9, 0),
