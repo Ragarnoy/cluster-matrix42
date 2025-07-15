@@ -78,6 +78,7 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 name = "basic-panel"
 version = "0.1.0"
 dependencies = [
+ "cluster-core",
  "cortex-m-rt",
  "defmt",
  "defmt-rtt",
@@ -85,6 +86,7 @@ dependencies = [
  "embassy-rp",
  "embassy-time",
  "graphics-common",
+ "heapless",
  "hub75-rp2350-driver",
  "panic-probe",
  "static_cell",

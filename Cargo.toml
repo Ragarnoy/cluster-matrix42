@@ -11,7 +11,7 @@ members = [
 ]
 
 [profile.release]
-opt-level = 3
+opt-level = "s"
 lto = true
 codegen-units = 1
 debug = 2

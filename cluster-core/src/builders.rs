@@ -24,23 +24,23 @@ fn make_builder_error(field: &'static str) -> ClusterString {
 #[cfg(not(feature = "std"))]
 fn make_builder_error(field: &'static str) -> ClusterString {
     match field {
-        "attributes" => ClusterString::try_from("no value supplied for attributes").unwrap(),
-        "id" => ClusterString::try_from("no value supplied for id").unwrap(),
-        "name" => ClusterString::try_from("no value supplied for name").unwrap(),
-        "zones" => ClusterString::try_from("no value supplied for zones").unwrap(),
-        "message" => ClusterString::try_from("no value supplied for message").unwrap(),
-        "seats" => ClusterString::try_from("no value supplied for seats").unwrap(),
-        "x" => ClusterString::try_from("no value supplied for x").unwrap(),
-        "y" => ClusterString::try_from("no value supplied for y").unwrap(),
-        "kind" => ClusterString::try_from("no value supplied for kind").unwrap(),
-        "status" => ClusterString::try_from("no value supplied for status").unwrap(),
-        "f0" => ClusterString::try_from("no value supplied for f0").unwrap(),
-        "f1" => ClusterString::try_from("no value supplied for f1").unwrap(),
-        "f1b" => ClusterString::try_from("no value supplied for f1b").unwrap(),
-        "f2" => ClusterString::try_from("no value supplied for f2").unwrap(),
-        "f4" => ClusterString::try_from("no value supplied for f4").unwrap(),
-        "f6" => ClusterString::try_from("no value supplied for f6").unwrap(),
-        _ => ClusterString::try_from("no value supplied").unwrap(),
+        "attributes" => ClusterString::try_from("no attrs").unwrap(),
+        "id" => ClusterString::try_from("no id").unwrap(),
+        "name" => ClusterString::try_from("no name").unwrap(),
+        "zones" => ClusterString::try_from("no zones").unwrap(),
+        "message" => ClusterString::try_from("no msg").unwrap(),
+        "seats" => ClusterString::try_from("no seats").unwrap(),
+        "x" => ClusterString::try_from("no x").unwrap(),
+        "y" => ClusterString::try_from("no y").unwrap(),
+        "kind" => ClusterString::try_from("no kind").unwrap(),
+        "status" => ClusterString::try_from("no status").unwrap(),
+        "f0" => ClusterString::try_from("no f0").unwrap(),
+        "f1" => ClusterString::try_from("no f1").unwrap(),
+        "f1b" => ClusterString::try_from("no f1b").unwrap(),
+        "f2" => ClusterString::try_from("no f2").unwrap(),
+        "f4" => ClusterString::try_from("no f4").unwrap(),
+        "f6" => ClusterString::try_from("no f6").unwrap(),
+        _ => ClusterString::try_from("no value").unwrap(),
     }
 }
 
@@ -52,27 +52,23 @@ fn make_conversion_error<T: core::fmt::Display>(field: &'static str, e: T) -> Cl
 #[cfg(not(feature = "std"))]
 fn make_conversion_error<T: core::fmt::Display>(field: &'static str, _e: T) -> ClusterString {
     match field {
-        "attributes" => {
-            ClusterString::try_from("error converting supplied value for attributes").unwrap()
-        }
-        "id" => ClusterString::try_from("error converting supplied value for id").unwrap(),
-        "name" => ClusterString::try_from("error converting supplied value for name").unwrap(),
-        "zones" => ClusterString::try_from("error converting supplied value for zones").unwrap(),
-        "message" => {
-            ClusterString::try_from("error converting supplied value for message").unwrap()
-        }
-        "seats" => ClusterString::try_from("error converting supplied value for seats").unwrap(),
-        "x" => ClusterString::try_from("error converting supplied value for x").unwrap(),
-        "y" => ClusterString::try_from("error converting supplied value for y").unwrap(),
-        "kind" => ClusterString::try_from("error converting supplied value for kind").unwrap(),
-        "status" => ClusterString::try_from("error converting supplied value for status").unwrap(),
-        "f0" => ClusterString::try_from("error converting supplied value for f0").unwrap(),
-        "f1" => ClusterString::try_from("error converting supplied value for f1").unwrap(),
-        "f1b" => ClusterString::try_from("error converting supplied value for f1b").unwrap(),
-        "f2" => ClusterString::try_from("error converting supplied value for f2").unwrap(),
-        "f4" => ClusterString::try_from("error converting supplied value for f4").unwrap(),
-        "f6" => ClusterString::try_from("error converting supplied value for f6").unwrap(),
-        _ => ClusterString::try_from("error converting supplied value").unwrap(),
+        "attributes" => ClusterString::try_from("bad attrs").unwrap(),
+        "id" => ClusterString::try_from("bad id").unwrap(),
+        "name" => ClusterString::try_from("bad name").unwrap(),
+        "zones" => ClusterString::try_from("bad zones").unwrap(),
+        "message" => ClusterString::try_from("bad msg").unwrap(),
+        "seats" => ClusterString::try_from("bad seats").unwrap(),
+        "x" => ClusterString::try_from("bad x").unwrap(),
+        "y" => ClusterString::try_from("bad y").unwrap(),
+        "kind" => ClusterString::try_from("bad kind").unwrap(),
+        "status" => ClusterString::try_from("bad status").unwrap(),
+        "f0" => ClusterString::try_from("bad f0").unwrap(),
+        "f1" => ClusterString::try_from("bad f1").unwrap(),
+        "f1b" => ClusterString::try_from("bad f1b").unwrap(),
+        "f2" => ClusterString::try_from("bad f2").unwrap(),
+        "f4" => ClusterString::try_from("bad f4").unwrap(),
+        "f6" => ClusterString::try_from("bad f6").unwrap(),
+        _ => ClusterString::try_from("bad value").unwrap(),
     }
 }
 
@@ -226,27 +222,13 @@ pub struct LayoutBuilder {
 
 impl Default for LayoutBuilder {
     fn default() -> Self {
-        #[cfg(feature = "std")]
-        {
-            Self {
-                f0: Err("no value supplied for f0".into()),
-                f1: Err("no value supplied for f1".into()),
-                f1b: Err("no value supplied for f1b".into()),
-                f2: Err("no value supplied for f2".into()),
-                f4: Err("no value supplied for f4".into()),
-                f6: Err("no value supplied for f6".into()),
-            }
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            Self {
-                f0: Err(ClusterString::try_from("no value supplied for f0").unwrap()),
-                f1: Err(ClusterString::try_from("no value supplied for f1").unwrap()),
-                f1b: Err(ClusterString::try_from("no value supplied for f1b").unwrap()),
-                f2: Err(ClusterString::try_from("no value supplied for f2").unwrap()),
-                f4: Err(ClusterString::try_from("no value supplied for f4").unwrap()),
-                f6: Err(ClusterString::try_from("no value supplied for f6").unwrap()),
-            }
+        Self {
+            f0: Err(make_builder_error("f0")),
+            f1: Err(make_builder_error("f1")),
+            f1b: Err(make_builder_error("f1b")),
+            f2: Err(make_builder_error("f2")),
+            f4: Err(make_builder_error("f4")),
+            f6: Err(make_builder_error("f6")),
         }
     }
 }
@@ -264,7 +246,7 @@ impl LayoutBuilder {
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for f0").unwrap()
+                ClusterString::try_from("error for f0").unwrap()
             }
         });
         self
@@ -278,11 +260,11 @@ impl LayoutBuilder {
         self.f1 = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for f1: {_e}")
+                format!("error for f1: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for f1").unwrap()
+                ClusterString::try_from("error for f1").unwrap()
             }
         });
         self
@@ -296,11 +278,11 @@ impl LayoutBuilder {
         self.f1b = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for f1b: {_e}")
+                format!("error for f1b: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for f1b").unwrap()
+                ClusterString::try_from("error for f1b").unwrap()
             }
         });
         self
@@ -314,11 +296,11 @@ impl LayoutBuilder {
         self.f2 = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for f2: {_e}")
+                format!("error for f2: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for f2").unwrap()
+                ClusterString::try_from("error for f2").unwrap()
             }
         });
         self
@@ -332,11 +314,11 @@ impl LayoutBuilder {
         self.f4 = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for f4: {_e}")
+                format!("error for f4: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for f4").unwrap()
+                ClusterString::try_from("error for f4").unwrap()
             }
         });
         self
@@ -350,11 +332,11 @@ impl LayoutBuilder {
         self.f6 = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for f6: {_e}")
+                format!("error for f6: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for f6").unwrap()
+                ClusterString::try_from("error for f6").unwrap()
             }
         });
         self
@@ -452,27 +434,12 @@ pub struct ClusterBuilder {
 
 impl Default for ClusterBuilder {
     fn default() -> Self {
-        #[cfg(feature = "std")]
-        {
-            Self {
-                message: Err("no value supplied for message".into()),
-                attributes: Err("no value supplied for attributes".into()),
-                name: Err("no value supplied for name".into()),
-                seats: Err("no value supplied for seats".into()),
-                zones: Err("no value supplied for zones".into()),
-            }
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            Self {
-                message: Err(ClusterString::try_from("no value supplied for message").unwrap()),
-                attributes: Err(
-                    ClusterString::try_from("no value supplied for attributes").unwrap()
-                ),
-                name: Err(ClusterString::try_from("no value supplied for name").unwrap()),
-                seats: Err(ClusterString::try_from("no value supplied for seats").unwrap()),
-                zones: Err(ClusterString::try_from("no value supplied for zones").unwrap()),
-            }
+        Self {
+            message: Err(make_builder_error("message")),
+            attributes: Err(make_builder_error("attributes")),
+            name: Err(make_builder_error("name")),
+            seats: Err(make_builder_error("seats")),
+            zones: Err(make_builder_error("zones")),
         }
     }
 }
@@ -486,11 +453,11 @@ impl ClusterBuilder {
         self.message = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for message: {_e}")
+                format!("error for message: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for message").unwrap()
+                ClusterString::try_from("error for message").unwrap()
             }
         });
         self
@@ -504,11 +471,11 @@ impl ClusterBuilder {
         self.attributes = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for attributes: {_e}")
+                format!("error for attributes: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for attributes").unwrap()
+                ClusterString::try_from("error for attributes").unwrap()
             }
         });
         self
@@ -522,11 +489,11 @@ impl ClusterBuilder {
         self.name = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for name: {_e}")
+                format!("error for name: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for name").unwrap()
+                ClusterString::try_from("error for name").unwrap()
             }
         });
         self
@@ -540,11 +507,11 @@ impl ClusterBuilder {
         self.seats = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for seats: {_e}")
+                format!("error for seats: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for seats").unwrap()
+                ClusterString::try_from("error for seats").unwrap()
             }
         });
         self
@@ -558,11 +525,11 @@ impl ClusterBuilder {
         self.zones = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for zones: {_e}")
+                format!("error for zones: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for zones").unwrap()
+                ClusterString::try_from("error for zones").unwrap()
             }
         });
         self
@@ -650,25 +617,12 @@ pub struct SeatBuilder {
 
 impl Default for SeatBuilder {
     fn default() -> Self {
-        #[cfg(feature = "std")]
-        {
-            Self {
-                id: Err("no value supplied for id".into()),
-                kind: Err("no value supplied for kind".into()),
-                status: Err("no value supplied for status".into()),
-                x: Err("no value supplied for x".into()),
-                y: Err("no value supplied for y".into()),
-            }
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            Self {
-                id: Err(ClusterString::try_from("no value supplied for id").unwrap()),
-                kind: Err(ClusterString::try_from("no value supplied for kind").unwrap()),
-                status: Err(ClusterString::try_from("no value supplied for status").unwrap()),
-                x: Err(ClusterString::try_from("no value supplied for x").unwrap()),
-                y: Err(ClusterString::try_from("no value supplied for y").unwrap()),
-            }
+        Self {
+            id: Err(make_builder_error("id")),
+            kind: Err(make_builder_error("kind")),
+            status: Err(make_builder_error("status")),
+            x: Err(make_builder_error("x")),
+            y: Err(make_builder_error("y")),
         }
     }
 }
@@ -682,11 +636,11 @@ impl SeatBuilder {
         self.id = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for id: {_e}")
+                format!("error for id: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for id").unwrap()
+                ClusterString::try_from("error for id").unwrap()
             }
         });
         self
@@ -700,11 +654,11 @@ impl SeatBuilder {
         self.kind = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for kind: {_e}")
+                format!("error for kind: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for kind").unwrap()
+                ClusterString::try_from("error for kind").unwrap()
             }
         });
         self
@@ -718,11 +672,11 @@ impl SeatBuilder {
         self.status = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for status: {_e}")
+                format!("error for status: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for status").unwrap()
+                ClusterString::try_from("error for status").unwrap()
             }
         });
         self
@@ -736,11 +690,11 @@ impl SeatBuilder {
         self.x = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for x: {_e}")
+                format!("error for x: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for x").unwrap()
+                ClusterString::try_from("error for x").unwrap()
             }
         });
         self
@@ -754,11 +708,11 @@ impl SeatBuilder {
         self.y = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for y: {_e}")
+                format!("error for y: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for y").unwrap()
+                ClusterString::try_from("error for y").unwrap()
             }
         });
         self
@@ -845,25 +799,11 @@ pub struct ZoneBuilder {
 
 impl Default for ZoneBuilder {
     fn default() -> Self {
-        #[cfg(feature = "std")]
-        {
-            Self {
-                attributes: Err("no value supplied for attributes".into()),
-                name: Err("no value supplied for name".into()),
-                x: Err("no value supplied for x".into()),
-                y: Err("no value supplied for y".into()),
-            }
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            Self {
-                attributes: Err(
-                    ClusterString::try_from("no value supplied for attributes").unwrap()
-                ),
-                name: Err(ClusterString::try_from("no value supplied for name").unwrap()),
-                x: Err(ClusterString::try_from("no value supplied for x").unwrap()),
-                y: Err(ClusterString::try_from("no value supplied for y").unwrap()),
-            }
+        Self {
+            attributes: Err(make_builder_error("attributes")),
+            name: Err(make_builder_error("name")),
+            x: Err(make_builder_error("x")),
+            y: Err(make_builder_error("y")),
         }
     }
 }
@@ -877,11 +817,11 @@ impl ZoneBuilder {
         self.attributes = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for attributes: {_e}")
+                format!("error for attributes: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for attributes").unwrap()
+                ClusterString::try_from("error for attributes").unwrap()
             }
         });
         self
@@ -895,11 +835,11 @@ impl ZoneBuilder {
         self.name = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for name: {_e}")
+                format!("error for name: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for name").unwrap()
+                ClusterString::try_from("error for name").unwrap()
             }
         });
         self
@@ -913,11 +853,11 @@ impl ZoneBuilder {
         self.x = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for x: {_e}")
+                format!("error for x: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for x").unwrap()
+                ClusterString::try_from("error for x").unwrap()
             }
         });
         self
@@ -931,11 +871,11 @@ impl ZoneBuilder {
         self.y = value.try_into().map_err(|_e| {
             #[cfg(feature = "std")]
             {
-                format!("error converting supplied value for y: {_e}")
+                format!("error for y: {_e}")
             }
             #[cfg(not(feature = "std"))]
             {
-                ClusterString::try_from("error converting supplied value for y").unwrap()
+                ClusterString::try_from("error for y").unwrap()
             }
         });
         self

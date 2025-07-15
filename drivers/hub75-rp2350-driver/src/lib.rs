@@ -398,10 +398,13 @@ impl<'d> DrawTarget for Hub75<'d> {
     {
         for Pixel(mut point, color) in pixels {
             #[cfg(feature = "size_128x128")]
-            coord_transfer(&mut point);
-            if point.x >= 0 && point.y >= 0 && point.y < 64 && point.x < 256 {
-                self.set_pixel(point.x as usize, point.y as usize, color);
+            {
+                if point.x >= 128 || point.y >= 128 || point.y < 0 || point.x < 0 {
+                    continue;
+                }
+                coord_transfer(&mut point);
             }
+            self.set_pixel(point.x as usize, point.y as usize, color);
         }
         Ok(())
     }

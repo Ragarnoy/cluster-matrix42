@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 hub75-rp2350-driver = { workspace = true }
 graphics-common = { workspace = true }
+cluster-core = { workspace = true }
 
 # Logging dependencies
 defmt = { version = "1.0.1" }
@@ -17,7 +18,10 @@ cortex-m-rt = { workspace = true }
 embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
 embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
+
+# No std deps
 static_cell = { workspace = true }
+heapless = { workspace = true }
 
 [lib]
 test = false
@@ -25,6 +29,11 @@ bench = false
 
 [[bin]]
 name = "basic_panel"
+test = false
+bench = false
+
+[[bin]]
+name = "cluster_sim_hard"
 test = false
 bench = false
 

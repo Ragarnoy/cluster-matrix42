@@ -3,52 +3,17 @@
 #![no_std]
 #![no_main]
 
+use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
-use embassy_rp::multicore::{Stack, spawn_core1};
+use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
 use graphics_common::animations;
 use hub75_rp2350_driver::{DisplayMemory, Hub75};
-use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
-
-// Multicore setup
-static mut CORE1_STACK: Stack<4096> = Stack::new();
-static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
-
-// Static memory for the display - required for the driver
-static DISPLAY_MEMORY: StaticCell<DisplayMemory> = StaticCell::new();
-
-// Pin grouping structures to reduce parameter count
-pub struct Hub75Pins {
-    // RGB data pins
-    pub r1_pin: Peri<'static, PIN_0>,
-    pub g1_pin: Peri<'static, PIN_1>,
-    pub b1_pin: Peri<'static, PIN_2>,
-    pub r2_pin: Peri<'static, PIN_3>,
-    pub g2_pin: Peri<'static, PIN_4>,
-    pub b2_pin: Peri<'static, PIN_5>,
-    // Address pins
-    pub a_pin: Peri<'static, PIN_6>,
-    pub b_pin: Peri<'static, PIN_7>,
-    pub c_pin: Peri<'static, PIN_8>,
-    pub d_pin: Peri<'static, PIN_9>,
-    pub e_pin: Peri<'static, PIN_10>,
-    // Control pins
-    pub clk_pin: Peri<'static, PIN_11>,
-    pub lat_pin: Peri<'static, PIN_12>,
-    pub oe_pin: Peri<'static, PIN_13>,
-}
-
-pub struct DmaChannels {
-    pub dma_ch0: Peri<'static, DMA_CH0>,
-    pub dma_ch1: Peri<'static, DMA_CH1>,
-    pub dma_ch2: Peri<'static, DMA_CH2>,
-    pub dma_ch3: Peri<'static, DMA_CH3>,
-}
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
