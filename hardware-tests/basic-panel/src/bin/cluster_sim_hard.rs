@@ -8,7 +8,7 @@ use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins
 use cluster_core::builders::AttributeVec;
 use cluster_core::models::{Cluster, Layout, Seat, SeatVec, Zone, ZoneVec};
 use cluster_core::types::{Attribute, ClusterString, Kind, MessageString, SeatId, Status};
-use cluster_core::visualization::{draw_cluster_frame, ClusterRenderer};
+use cluster_core::visualization::{ClusterRenderer, draw_cluster_frame};
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
@@ -120,7 +120,7 @@ async fn cluster_matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels
     let mut last_time = embassy_time::Instant::now();
 
     let renderer = ClusterRenderer::new();
-    
+
     loop {
         let current_time = embassy_time::Instant::now();
         let elapsed = current_time.duration_since(last_time);
