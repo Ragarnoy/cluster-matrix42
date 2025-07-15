@@ -93,7 +93,7 @@ where
             let star_color = Rgb565::new(brightness, brightness << 1, (y >> 2) as u8);
 
             // Draw larger stars occasionally
-            if i % 7 == 0 {
+            if i.is_multiple_of(7) {
                 // Bigger star
                 Circle::new(Point::new(*x - 1, *y - 1), 3)
                     .into_styled(PrimitiveStyle::with_fill(star_color))

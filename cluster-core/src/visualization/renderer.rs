@@ -1,12 +1,13 @@
 //! Cluster visualization renderer
 
-use crate::models::{Cluster, Seat, Layout, ClusterStats};
+use crate::models::{Cluster, Layout, Seat};
+use crate::types::ClusterId::F0;
 use crate::types::{ClusterId, Kind, Status};
 use crate::visualization::display::{
     DEFAULT_LAYOUT, DISPLAY_WIDTH, DisplayLayout, FLOOR_BAR_SPACING, FLOOR_BARS_Y,
-    FLOOR_INDICATOR_COUNT, FLOOR_INFO_LEFT_MARGIN, FLOOR_INFO_WIDTH, FLOOR_TEXT_BASELINE_Y,
-    FLOOR_TEXT_X, MOTD_LINE_HEIGHT, MOTD_TEXT_Y, SPLIT_FLOOR_GAP, STATUS_BAR_HEIGHT,
-    STATUS_BAR_SIDE_MARGIN, ZONE_TEXT_Y_OFFSET, visual,
+    FLOOR_INFO_LEFT_MARGIN, FLOOR_INFO_WIDTH, FLOOR_TEXT_BASELINE_Y, FLOOR_TEXT_X,
+    MOTD_LINE_HEIGHT, MOTD_TEXT_Y, SPLIT_FLOOR_GAP, STATUS_BAR_HEIGHT, STATUS_BAR_SIDE_MARGIN,
+    ZONE_TEXT_Y_OFFSET, visual,
 };
 use core::fmt::Write;
 use embedded_graphics::{
@@ -17,7 +18,6 @@ use embedded_graphics::{
     text::Text,
 };
 use heapless::String;
-use crate::types::ClusterId::F0;
 
 /// Main cluster renderer
 pub struct ClusterRenderer {
@@ -87,7 +87,14 @@ impl ClusterRenderer {
         Ok(())
     }
 
-    fn render_floor_info<D>(&self, display: &mut D, cluster: &Cluster, origin: Point, width: u32, is_selected: bool) -> Result<(), D::Error>
+    fn render_floor_info<D>(
+        &self,
+        display: &mut D,
+        cluster: &Cluster,
+        origin: Point,
+        width: u32,
+        is_selected: bool,
+    ) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
     {
@@ -100,10 +107,7 @@ impl ClusterRenderer {
             visual::FLOOR_UNSELECTED
         };
 
-        Rectangle::new(
-            origin,
-            Size::new(width, MOTD_LINE_HEIGHT),
-        )
+        Rectangle::new(origin, Size::new(width, MOTD_LINE_HEIGHT))
             .into_styled(PrimitiveStyle::with_stroke(bar_color, 1))
             .draw(display)?;
 
@@ -113,8 +117,8 @@ impl ClusterRenderer {
             Point::new(origin.x + 1, origin.y + 1),
             Size::new(bar_width, MOTD_LINE_HEIGHT - 2), // Leave 2px margin top/bottom
         )
-            .into_styled(PrimitiveStyle::with_fill(bar_color))
-            .draw(display)?;
+        .into_styled(PrimitiveStyle::with_fill(bar_color))
+        .draw(display)?;
 
         Ok(())
     }
@@ -145,7 +149,7 @@ impl ClusterRenderer {
             &layout.f0,
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32,
-                FLOOR_BARS_Y as i32 + (6i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32 + (6i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH,
             self.selected_cluster == F0,
@@ -157,10 +161,10 @@ impl ClusterRenderer {
             &layout.f1,
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32,
-                FLOOR_BARS_Y as i32 + (5i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32 + (5i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             f1_width,
-            false
+            false,
         )?;
 
         self.render_floor_info(
@@ -168,10 +172,10 @@ impl ClusterRenderer {
             &layout.f1b,
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32 + f1_width as i32 + SPLIT_FLOOR_GAP as i32,
-                FLOOR_BARS_Y as i32 + (5i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32 + (5i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH - SPLIT_FLOOR_GAP - f1_width,
-            false
+            false,
         )?;
 
         self.render_floor_info(
@@ -179,54 +183,54 @@ impl ClusterRenderer {
             &layout.f2,
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32,
-                FLOOR_BARS_Y as i32 + (4i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32 + (4i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH,
-            false
+            false,
         )?;
 
         // Inactive floor - grey filled rectangle
         Rectangle::new(
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32,
-                FLOOR_BARS_Y as i32 + (3i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32 + (3i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
         )
-            .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_INACTIVE))
-            .draw(display)?;
+        .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_INACTIVE))
+        .draw(display)?;
 
         self.render_floor_info(
             display,
             &layout.f4,
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32,
-                FLOOR_BARS_Y as i32 + (2i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32 + (2i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH,
-            false
+            false,
         )?;
 
         // Inactive floor - grey filled rectangle
         Rectangle::new(
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32,
-                FLOOR_BARS_Y as i32 + (1i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32 + ((MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             Size::new(FLOOR_INFO_WIDTH, MOTD_LINE_HEIGHT),
         )
-            .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_INACTIVE))
-            .draw(display)?;
+        .into_styled(PrimitiveStyle::with_fill(visual::FLOOR_INACTIVE))
+        .draw(display)?;
 
         self.render_floor_info(
             display,
             &layout.f6,
             Point::new(
                 FLOOR_INFO_LEFT_MARGIN as i32,
-                FLOOR_BARS_Y as i32 + (0i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32)
+                FLOOR_BARS_Y as i32, // At the top
             ),
             FLOOR_INFO_WIDTH,
-            false
+            false,
         )?;
 
         Ok(())
