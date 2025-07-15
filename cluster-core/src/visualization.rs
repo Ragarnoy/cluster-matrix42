@@ -10,10 +10,10 @@ use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
 pub use renderer::ClusterRenderer;
 
 /// Draw a cluster visualization frame
-pub fn draw_cluster_frame<D>(display: &mut D, cluster: &Layout, frame: u32) -> Result<(), D::Error>
+pub fn draw_cluster_frame<D>(display: &mut D, layout: &Layout, frame: u32) -> Result<(), D::Error>
 where
     D: DrawTarget<Color = Rgb565>,
 {
     let renderer = ClusterRenderer::new();
-    renderer.render_frame::<D>(display, &cluster.f0, frame)
+    renderer.render_frame::<D>(display, &layout, &layout.f0, frame)
 }
