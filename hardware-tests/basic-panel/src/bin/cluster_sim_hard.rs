@@ -8,16 +8,15 @@ use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins
 use cluster_core::builders::AttributeVec;
 use cluster_core::models::{Cluster, Layout, Seat, SeatVec, Zone, ZoneVec};
 use cluster_core::types::{Attribute, ClusterString, Kind, MessageString, SeatId, Status};
-use cluster_core::visualization::{ClusterRenderer, draw_cluster_frame};
+use cluster_core::visualization::ClusterRenderer;
 use core::ptr::addr_of_mut;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
-use embassy_rp::multicore::{Stack, spawn_core1};
+use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
 use hub75_rp2350_driver::{DisplayMemory, Hub75};
-use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
