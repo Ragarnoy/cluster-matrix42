@@ -235,3 +235,8 @@ impl Kind {
         }
     }
 }
+
+#[cfg(not(feature = "std"))]
+pub type AttributeVec = heapless::Vec<Attribute, { crate::constants::MAX_ATTRIBUTES }>;
+#[cfg(feature = "std")]
+pub type AttributeVec = std::vec::Vec<Attribute>;
