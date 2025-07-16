@@ -325,7 +325,7 @@ macro_rules! seats {
                     {
                         let mut s = heapless::String::<16>::new();
                         use core::fmt::Write;
-                        write!(&mut s, $pattern, $range.start + i).expect("Format error");
+                        write!(&mut s, $pattern, $range.start() + i).expect("Format error");
                         s
                     }
                 };
@@ -363,7 +363,7 @@ macro_rules! seats {
                     {
                         let mut s = heapless::String::<16>::new();
                         use core::fmt::Write;
-                        write!(&mut s, $pattern, $range.start + i).expect("Format error");
+                        write!(&mut s, $pattern, $range.start() + i).expect("Format error");
                         s
                     }
                 };
