@@ -666,32 +666,32 @@ fn create_sample_layout() -> Result<Layout, Box<dyn std::error::Error>> {
     ];
 
     // Create the F0 cluster
-    let f0: Cluster = Cluster::builder()
-        .message("Hello World!".to_string())
-        .attributes(vec![Attribute::Piscine])
-        .name("F0".to_string())
-        .seats(seats)
-        .zones(zones)
-        .try_into()?;
+    let f0 = Cluster {
+        message: "Hello World!".to_string(),
+        attributes: vec![Attribute::Piscine],
+        name: "F0".to_string(),
+        seats,
+        zones,
+    };
 
     // Create empty clusters for other floors
-    let empty_cluster: Cluster = Cluster::builder()
-        .message("".to_string())
-        .attributes(vec![])
-        .name("".to_string())
-        .seats(vec![])
-        .zones(vec![])
-        .try_into()?;
+    let empty_cluster = Cluster {
+        message: "".to_string(),
+        attributes: vec![],
+        name: "".to_string(),
+        seats: vec![],
+        zones: vec![],
+    };
 
     // Create the complete layout
-    let layout: Layout = Layout::builder()
-        .f0(f0)
-        .f1(empty_cluster.clone())
-        .f1b(empty_cluster.clone())
-        .f2(empty_cluster.clone())
-        .f4(empty_cluster.clone())
-        .f6(empty_cluster)
-        .try_into()?;
+    let layout = Layout {
+        f0,
+        f1: empty_cluster.clone(),
+        f1b: empty_cluster.clone(),
+        f2: empty_cluster.clone(),
+        f4: empty_cluster.clone(),
+        f6: empty_cluster,
+    };
 
     Ok(layout)
 }
