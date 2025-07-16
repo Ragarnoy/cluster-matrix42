@@ -209,14 +209,14 @@ impl_enum_conversions!(
 // Visualization helpers for Status
 impl Status {
     /// Get the display color for this status
-    pub fn color(&self) -> embedded_graphics::pixelcolor::Rgb565 {
+    pub const fn color(&self) -> embedded_graphics::pixelcolor::Rgb565 {
         use embedded_graphics::pixelcolor::Rgb565;
 
         match self {
-            Status::Free => Rgb565::WHITE,
-            Status::Taken => Rgb565::new(0, 20, 31), // Cyan-ish
-            Status::Broken => Rgb565::new(31, 0, 0), // Red
-            Status::Reported => Rgb565::new(31, 16, 0), // Orange
+            Self::Free => Rgb565::WHITE,
+            Self::Taken => Rgb565::new(0, 20, 31), // Cyan-ish
+            Self::Broken => Rgb565::new(31, 0, 0), // Red
+            Self::Reported => Rgb565::new(31, 16, 0), // Orange
         }
     }
 }
@@ -224,14 +224,14 @@ impl Status {
 // Visualization helpers for Kind
 impl Kind {
     /// Get the display color for this kind when the seat is taken
-    pub fn taken_color(&self) -> embedded_graphics::pixelcolor::Rgb565 {
+    pub const fn taken_color(&self) -> embedded_graphics::pixelcolor::Rgb565 {
         use embedded_graphics::pixelcolor::Rgb565;
 
         match self {
-            Kind::Mac => Rgb565::new(0, 0, 31),     // Blue
-            Kind::Flex => Rgb565::new(31, 31, 0),   // Yellow
-            Kind::Dell => Rgb565::new(0, 20, 31),   // Cyan-ish
-            Kind::Lenovo => Rgb565::new(20, 0, 31), // Purple-ish
+            Self::Mac => Rgb565::new(0, 0, 31),     // Blue
+            Self::Flex => Rgb565::new(31, 31, 0),   // Yellow
+            Self::Dell => Rgb565::new(0, 20, 31),   // Cyan-ish
+            Self::Lenovo => Rgb565::new(20, 0, 31), // Purple-ish
         }
     }
 }

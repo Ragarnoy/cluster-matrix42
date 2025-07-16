@@ -659,7 +659,7 @@ fn create_sample_layout() -> Result<Layout, Box<dyn std::error::Error>> {
         },
         Zone {
             attributes: vec![Attribute::Silent],
-            name: "".to_string(),
+            name: String::new(),
             x: 0,
             y: 1,
         },
@@ -676,9 +676,9 @@ fn create_sample_layout() -> Result<Layout, Box<dyn std::error::Error>> {
 
     // Create empty clusters for other floors
     let empty_cluster = Cluster {
-        message: "".to_string(),
+        message: String::new(),
         attributes: vec![],
-        name: "".to_string(),
+        name: String::new(),
         seats: vec![],
         zones: vec![],
     };

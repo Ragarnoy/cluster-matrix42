@@ -34,7 +34,7 @@ impl ClusterRenderer {
         }
     }
 
-    pub fn set_selected_cluster(&mut self, selected_cluster: ClusterId) {
+    pub const fn set_selected_cluster(&mut self, selected_cluster: ClusterId) {
         self.selected_cluster = selected_cluster;
     }
 
@@ -317,7 +317,7 @@ impl ClusterRenderer {
         Ok(())
     }
 
-    fn seat_to_color(seat: &Seat) -> Rgb565 {
+    const fn seat_to_color(seat: &Seat) -> Rgb565 {
         match (seat.kind, seat.status) {
             (Kind::Dell | Kind::Lenovo | Kind::Mac, Status::Free) => Rgb565::GREEN,
             (Kind::Dell | Kind::Lenovo | Kind::Mac, Status::Taken) => Rgb565::BLUE,

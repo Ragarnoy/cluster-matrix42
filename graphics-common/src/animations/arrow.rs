@@ -30,7 +30,7 @@ const LOOP_CYCLE: i32 = DISPLAY_WIDTH + PATTERN_WIDTH - 60; // Total frames for 
 const BACKGROUND_COLOR: Rgb565 = Rgb565::BLACK;
 
 /// Calculate the pattern's X position based on the current frame
-fn get_pattern_x_position(frame: u32) -> i32 {
+const fn get_pattern_x_position(frame: u32) -> i32 {
     let movement_frame = frame / FRAMES_PER_MOVE;
     let cycle_frame = (movement_frame as i32) % LOOP_CYCLE;
     -PATTERN_WIDTH + (cycle_frame * ARROW_SPEED)

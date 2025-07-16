@@ -134,11 +134,11 @@ impl Simulator {
         Ok(())
     }
 
-    pub fn display_mut(&mut self) -> &mut SimulatorDisplay<Rgb565> {
+    pub const fn display_mut(&mut self) -> &mut SimulatorDisplay<Rgb565> {
         &mut self.display
     }
 
-    pub fn window_mut(&mut self) -> &mut Window {
+    pub const fn window_mut(&mut self) -> &mut Window {
         &mut self.window
     }
 }

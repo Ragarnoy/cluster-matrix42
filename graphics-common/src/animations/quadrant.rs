@@ -24,7 +24,7 @@ const COLORS: [Rgb565; 6] = [
 ];
 
 /// Get color for a panel at a given frame
-fn get_panel_color(panel_id: usize, frame: u32) -> Rgb565 {
+const fn get_panel_color(panel_id: usize, frame: u32) -> Rgb565 {
     // Determine which color cycle we're in (0-5 over 360 frames)
     let cycle = (frame / 60) % 6;
 
