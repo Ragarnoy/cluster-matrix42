@@ -18,6 +18,7 @@ cortex-m-rt = { workspace = true }
 embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
 embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-sync = { workspace = true }
 
 # No std deps
 static_cell = { workspace = true }
