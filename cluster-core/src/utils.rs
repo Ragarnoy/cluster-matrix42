@@ -40,18 +40,16 @@ macro_rules! zone {
         $crate::models::Zone {
             name: $name.try_into().expect("Invalid zone name"),
             attributes: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec![$($attr),*]
-                }
-                #[cfg(not(feature = "std"))]
-                {
+                use $crate::types::AttributeVec;
+                #[allow(unused_mut)]
+                let mut attrs = AttributeVec::new();
+                $(
+                    #[allow(unused_must_use)]
                     {
-                        let mut attrs = heapless::Vec::new();
-                        $(attrs.push($attr).expect("Too many attributes");)*
-                        attrs
+                        attrs.push($attr);
                     }
-                }
+                )*
+                attrs
             },
             x: $x,
             y: $y,
@@ -92,46 +90,39 @@ macro_rules! cluster {
             message: $message.try_into().expect("Invalid message"),
             name: $name.try_into().expect("Invalid cluster name"),
             attributes: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec![$($attr),*]
-                }
-                #[cfg(not(feature = "std"))]
-                {
+                use $crate::types::AttributeVec;
+                #[allow(unused_mut)]
+                let mut attrs = AttributeVec::new();
+                $(
+                    #[allow(unused_must_use)]
                     {
-                        let mut attrs = heapless::Vec::new();
-                        $(attrs.push($attr).expect("Too many attributes");)*
-                        attrs
+                        attrs.push($attr);
                     }
-                }
+                )*
+                attrs
             },
             seats: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec![$($seat),*]
-                }
-                #[cfg(not(feature = "std"))]
-                {
+                use $crate::models::SeatVec;
+                let mut seats = SeatVec::new();
+                $(
+                    #[allow(unused_must_use)]
                     {
-                        let mut seats = heapless::Vec::new();
-                        $(seats.push($seat).expect("Too many seats");)*
-                        seats
+                        seats.push($seat);
                     }
-                }
+                )*
+                seats
             },
             zones: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec![$($zone),*]
-                }
-                #[cfg(not(feature = "std"))]
-                {
+                use $crate::models::ZoneVec;
+                #[allow(unused_mut)]
+                let mut zones = ZoneVec::new();
+                $(
+                    #[allow(unused_must_use)]
                     {
-                        let mut zones = heapless::Vec::new();
-                        $(zones.push($zone).expect("Too many zones");)*
-                        zones
+                        zones.push($zone);
                     }
-                }
+                )*
+                zones
             },
         }
     };
@@ -148,18 +139,15 @@ macro_rules! cluster {
             message: $message.try_into().expect("Invalid message"),
             name: $name.try_into().expect("Invalid cluster name"),
             attributes: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec![$($attr),*]
-                }
-                #[cfg(not(feature = "std"))]
-                {
+                use $crate::types::AttributeVec;
+                let mut attrs = AttributeVec::new();
+                $(
+                    #[allow(unused_must_use)]
                     {
-                        let mut attrs = heapless::Vec::new();
-                        $(attrs.push($attr).expect("Too many attributes");)*
-                        attrs
+                        attrs.push($attr);
                     }
-                }
+                )*
+                attrs
             },
             seats: $seats,
             zones: $zones,
@@ -198,36 +186,9 @@ macro_rules! empty_cluster {
         $crate::models::Cluster {
             message: "".try_into().expect("Invalid empty message"),
             name: $name.try_into().expect("Invalid cluster name"),
-            attributes: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec::Vec::new()
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    heapless::Vec::new()
-                }
-            },
-            seats: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec::Vec::new()
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    heapless::Vec::new()
-                }
-            },
-            zones: {
-                #[cfg(feature = "std")]
-                {
-                    std::vec::Vec::new()
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    heapless::Vec::new()
-                }
-            },
+            attributes: $crate::types::AttributeVec::new(),
+            seats: $crate::models::SeatVec::new(),
+            zones: $crate::models::ZoneVec::new(),
         }
     };
 }
@@ -308,32 +269,34 @@ macro_rules! seats {
         positions: $(($x:expr, $y:expr)),+
     } => {
         {
+            use $crate::models::SeatVec;
             let positions = [$(($x, $y)),+];
             let statuses = [$($status),+];
-            let mut seats = {
-                #[cfg(feature = "std")]
-                { std::vec::Vec::new() }
-                #[cfg(not(feature = "std"))]
-                { heapless::Vec::new() }
-            };
+            let mut seats = SeatVec::new();
 
             for (i, (x, y)) in positions.iter().enumerate() {
-                let id = {
-                    #[cfg(feature = "std")]
-                    { std::format!($pattern, $range.start() + i) }
-                    #[cfg(not(feature = "std"))]
-                    {
-                        let mut s = heapless::String::<16>::new();
-                        use core::fmt::Write;
-                        write!(&mut s, $pattern, $range.start() + i).expect("Format error");
-                        s
-                    }
-                };
+                // Create the ID string
+                let mut id_string = $crate::types::SeatId::default();
+                {
+                    use core::fmt::Write;
+                    write!(&mut id_string, $pattern, $range.start() + i).expect("Format error");
+                }
+
                 let status = statuses[i % statuses.len()];
-                #[cfg(feature = "std")]
-                seats.push($crate::seat!(id, $kind, status, *x, *y));
-                #[cfg(not(feature = "std"))]
-                seats.push($crate::seat!(id, $kind, status, *x, *y)).expect("Too many seats");
+                let seat = $crate::models::Seat {
+                    id: id_string,
+                    kind: $kind,
+                    status,
+                    x: *x,
+                    y: *y,
+                };
+
+                // Use the appropriate push method based on the vector type
+                #[allow(unused_must_use)]
+                {
+                    seats.push(seat); // For std::vec::Vec, returns ()
+                                     // For heapless::Vec, returns Result
+                }
             }
             seats
         }
@@ -347,30 +310,32 @@ macro_rules! seats {
         positions: $(($x:expr, $y:expr)),+
     } => {
         {
+            use $crate::models::SeatVec;
             let positions = [$(($x, $y)),+];
-            let mut seats = {
-                #[cfg(feature = "std")]
-                { std::vec::Vec::new() }
-                #[cfg(not(feature = "std"))]
-                { heapless::Vec::new() }
-            };
+            let mut seats = SeatVec::new();
 
             for (i, (x, y)) in positions.iter().enumerate() {
-                let id = {
-                    #[cfg(feature = "std")]
-                    { std::format!($pattern, $range.start() + i) }
-                    #[cfg(not(feature = "std"))]
-                    {
-                        let mut s = heapless::String::<16>::new();
-                        use core::fmt::Write;
-                        write!(&mut s, $pattern, $range.start() + i).expect("Format error");
-                        s
-                    }
+                // Create the ID string
+                let mut id_string = $crate::types::SeatId::default();
+                {
+                    use core::fmt::Write;
+                    write!(&mut id_string, $pattern, $range.start() + i).expect("Format error");
+                }
+
+                let seat = $crate::models::Seat {
+                    id: id_string,
+                    kind: $kind,
+                    status: $status,
+                    x: *x,
+                    y: *y,
                 };
-                #[cfg(feature = "std")]
-                seats.push($crate::seat!(id, $kind, $status, *x, *y));
-                #[cfg(not(feature = "std"))]
-                seats.push($crate::seat!(id, $kind, $status, *x, *y)).expect("Too many seats");
+
+                // Use the appropriate push method based on the vector type
+                #[allow(unused_must_use)]
+                {
+                    seats.push(seat); // For std::vec::Vec, returns ()
+                                     // For heapless::Vec, returns Result
+                }
             }
             seats
         }
@@ -399,16 +364,14 @@ macro_rules! seats {
 macro_rules! extend_seats {
     ($vec:expr, [$($seat:expr),*]) => {
         {
-            #[cfg(feature = "std")]
-            {
-                $vec.extend(std::vec![$($seat),*]);
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                $(
-                    $vec.push($seat).expect("Too many seats in extension");
-                )*
-            }
+            // For std::vec::Vec, extend returns ()
+            // For heapless::Vec, push returns Result, which we ignore
+            $(
+                #[allow(unused_must_use)]
+                {
+                    $vec.push($seat);
+                }
+            )*
         }
     };
 }
