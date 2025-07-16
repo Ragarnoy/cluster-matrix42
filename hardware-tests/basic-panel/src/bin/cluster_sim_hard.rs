@@ -4,10 +4,10 @@
 #![no_std]
 #![no_main]
 
-use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
-use cluster_core::models::{Cluster, Layout, Seat, SeatVec, Zone, ZoneVec};
+use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins, LAYOUT};
+use cluster_core::models::{Cluster, Layout, SeatVec, Zone, ZoneVec};
 use cluster_core::types::AttributeVec;
-use cluster_core::types::{Attribute, ClusterString, Kind, MessageString, SeatId, Status};
+use cluster_core::types::{Attribute, ClusterString, Kind, MessageString, Status};
 use cluster_core::visualization::ClusterRenderer;
 use cluster_core::{empty_cluster, seats};
 use core::ptr::addr_of_mut;
@@ -16,6 +16,7 @@ use embassy_executor::{Executor, Spawner};
 use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
+use embassy_sync::rwlock::RwLock;
 use embassy_time::{Duration, Timer};
 use hub75_rp2350_driver::{DisplayMemory, Hub75};
 use {defmt_rtt as _, panic_probe as _};
@@ -113,6 +114,8 @@ async fn cluster_matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels
         }
     };
 
+    let layout = LAYOUT.init(RwLock::new(layout));
+
     info!("Sample cluster layout created successfully");
 
     // Animation loop
@@ -135,27 +138,29 @@ async fn cluster_matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels
         // Draw cluster frame
         let anim_start = embassy_time::Instant::now();
 
-        match renderer.render_frame(&mut display, &layout, &layout.f0, frame_counter) {
-            Ok(_) => {}
-            Err(_) => {
-                info!("Failed to draw cluster frame");
-                display.draw_test_pattern();
+        if let Ok(layout) = layout.try_read() {
+            match renderer.render_frame(&mut display, &layout, &layout.f0, frame_counter) {
+                Ok(_) => {}
+                Err(_) => {
+                    info!("Failed to draw cluster frame");
+                    display.draw_test_pattern();
+                }
             }
-        }
 
-        let anim_time = anim_start.elapsed();
+            let anim_time = anim_start.elapsed();
 
-        // Commit the buffer
-        let commit_start = embassy_time::Instant::now();
-        display.commit();
-        let commit_time = commit_start.elapsed();
+            // Commit the buffer
+            let commit_start = embassy_time::Instant::now();
+            display.commit();
+            let commit_time = commit_start.elapsed();
 
-        if frame_counter % 60 == 0 {
-            info!(
-                "Cluster draw time: {}us, Buffer commit time: {}us",
-                anim_time.as_micros(),
-                commit_time.as_micros()
-            );
+            if frame_counter % 60 == 0 {
+                info!(
+                    "Cluster draw time: {}us, Buffer commit time: {}us",
+                    anim_time.as_micros(),
+                    commit_time.as_micros()
+                );
+            }
         }
 
         // Control frame rate - cluster visualization is more static than animations
@@ -167,11 +172,6 @@ async fn cluster_matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels
 
 /// Create sample cluster layout using no_std compatible types
 fn create_sample_layout() -> Result<Layout, &'static str> {
-    // Helper function to create SeatId
-    fn make_seat_id(id: &str) -> Result<SeatId, &'static str> {
-        SeatId::try_from(id).map_err(|_| "seat id")
-    }
-
     // Helper function to create ClusterString
     fn make_cluster_string(s: &str) -> Result<ClusterString, &'static str> {
         ClusterString::try_from(s).map_err(|_| "str too long")
@@ -386,7 +386,7 @@ fn create_sample_layout() -> Result<Layout, &'static str> {
         message: make_message_string("Welcome to 42!")?,
         attributes: cluster_attrs,
         name: make_cluster_string("F0")?,
-        seats,
+        seats: all_seats,
         zones,
     };
 
