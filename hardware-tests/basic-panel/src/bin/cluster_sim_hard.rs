@@ -5,8 +5,8 @@
 #![no_main]
 
 use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
-use cluster_core::builders::AttributeVec;
 use cluster_core::models::{Cluster, Layout, Seat, SeatVec, Zone, ZoneVec};
+use cluster_core::types::AttributeVec;
 use cluster_core::types::{Attribute, ClusterString, Kind, MessageString, SeatId, Status};
 use cluster_core::visualization::ClusterRenderer;
 use core::ptr::addr_of_mut;
@@ -388,65 +388,61 @@ fn create_sample_layout() -> Result<Layout, &'static str> {
     let _ = cluster_attrs.push(Attribute::Piscine);
 
     // Create the F0 cluster using builder pattern (no_std compatible)
-    let f0: Cluster = Cluster::builder()
-        .message(make_message_string("Welcome to 42!")?)
-        .attributes(cluster_attrs)
-        .name(make_cluster_string("F0")?)
-        .seats(seats)
-        .zones(zones)
-        .try_into()
-        .map_err(|_| "clustr failed")?;
 
     // Create empty clusters for other floors
     let empty_seats = SeatVec::new();
     let empty_zones = ZoneVec::new();
     let empty_attrs = AttributeVec::new();
 
-    let empty_cluster: Cluster = Cluster::builder()
-        .message(make_message_string("")?)
-        .attributes(empty_attrs)
-        .name(make_cluster_string("")?)
-        .seats(empty_seats)
-        .zones(empty_zones)
-        .try_into()
-        .map_err(|_| "mpt clustr failed")?;
+    let f0 = Cluster {
+        message: make_message_string("Welcome to 42!")?,
+        attributes: cluster_attrs,
+        name: make_cluster_string("F0")?,
+        seats,
+        zones,
+    };
+
+    // Create empty clusters for other floors
+    let empty_cluster = Cluster {
+        message: make_message_string("")?,
+        attributes: empty_attrs,
+        name: make_cluster_string("")?,
+        seats: empty_seats,
+        zones: empty_zones,
+    };
 
     // Create more empty clusters (we need 5 more)
-    let empty_cluster1: Cluster = Cluster::builder()
-        .message(make_message_string("")?)
-        .attributes(AttributeVec::new())
-        .name(make_cluster_string("")?)
-        .seats(SeatVec::new())
-        .zones(ZoneVec::new())
-        .try_into()
-        .map_err(|_| "mpt clustr failed")?;
+    let empty_cluster1 = Cluster {
+        message: make_message_string("")?,
+        attributes: AttributeVec::new(),
+        name: make_cluster_string("")?,
+        seats: SeatVec::new(),
+        zones: ZoneVec::new(),
+    };
 
-    let empty_cluster2: Cluster = Cluster::builder()
-        .message(make_message_string("")?)
-        .attributes(AttributeVec::new())
-        .name(make_cluster_string("")?)
-        .seats(SeatVec::new())
-        .zones(ZoneVec::new())
-        .try_into()
-        .map_err(|_| "mpt clustr failed")?;
+    let empty_cluster2 = Cluster {
+        message: make_message_string("")?,
+        attributes: AttributeVec::new(),
+        name: make_cluster_string("")?,
+        seats: SeatVec::new(),
+        zones: ZoneVec::new(),
+    };
 
-    let empty_cluster3: Cluster = Cluster::builder()
-        .message(make_message_string("")?)
-        .attributes(AttributeVec::new())
-        .name(make_cluster_string("")?)
-        .seats(SeatVec::new())
-        .zones(ZoneVec::new())
-        .try_into()
-        .map_err(|_| "mpt clustr failed")?;
+    let empty_cluster3 = Cluster {
+        message: make_message_string("")?,
+        attributes: AttributeVec::new(),
+        name: make_cluster_string("")?,
+        seats: SeatVec::new(),
+        zones: ZoneVec::new(),
+    };
 
-    let empty_cluster4: Cluster = Cluster::builder()
-        .message(make_message_string("")?)
-        .attributes(AttributeVec::new())
-        .name(make_cluster_string("")?)
-        .seats(SeatVec::new())
-        .zones(ZoneVec::new())
-        .try_into()
-        .map_err(|_| "mpt clustr failed")?;
+    let empty_cluster4 = Cluster {
+        message: make_message_string("")?,
+        attributes: AttributeVec::new(),
+        name: make_cluster_string("")?,
+        seats: SeatVec::new(),
+        zones: ZoneVec::new(),
+    };
 
     // Create the complete layout
     let layout: Layout = Layout {

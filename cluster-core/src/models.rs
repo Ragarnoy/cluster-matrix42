@@ -1,6 +1,6 @@
 //! Main data models for cluster representation
 
-use crate::builders::AttributeVec;
+use crate::types::AttributeVec;
 use crate::types::{ClusterId, ClusterString, Kind, MessageString, SeatId, Status};
 use serde::{Deserialize, Serialize};
 
