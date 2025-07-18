@@ -16,11 +16,9 @@ use static_cell::StaticCell;
 // Multicore setup
 pub static mut CORE1_STACK: Stack<4096> = Stack::new();
 pub static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
-// Static memory for the display - required for the driver
 pub static DISPLAY_MEMORY: StaticCell<DisplayMemory> = StaticCell::new();
 pub static LAYOUT: StaticCell<RwLock<CriticalSectionRawMutex, Layout>> = StaticCell::new();
 
-// Pin grouping structures to reduce parameter count
 pub struct Hub75Pins {
     // RGB data pins
     pub r1_pin: Peri<'static, PIN_0>,
