@@ -170,6 +170,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-core-macros"
+version = "0.1.0"
+dependencies = [
+ "cluster-core",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "cluster-matrix-app"
 version = "0.1.0"
 dependencies = [
@@ -1507,6 +1519,7 @@ name = "simulator"
 version = "0.1.0"
 dependencies = [
  "cluster-core",
+ "cluster-core-macros",
  "embedded-graphics",
  "embedded-graphics-simulator",
  "graphics-common",

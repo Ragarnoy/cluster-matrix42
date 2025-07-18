@@ -1,0 +1,267 @@
+{
+  "f0": {
+    "message": "Welcome to Floor 0!",
+    "attributes": ["piscine"],
+    "name": "F0",
+    "seats": [
+      {
+        "id": "f0r1s1",
+        "kind": "mac",
+        "status": "taken",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "id": "f0r1s2",
+        "kind": "mac",
+        "status": "taken",
+        "x": 3,
+        "y": 1
+      },
+      {
+        "id": "f0r1s3",
+        "kind": "mac",
+        "status": "free",
+        "x": 6,
+        "y": 0
+      },
+      {
+        "id": "f0r1s4",
+        "kind": "mac",
+        "status": "taken",
+        "x": 9,
+        "y": 1
+      },
+      {
+        "id": "f0r1s5",
+        "kind": "mac",
+        "status": "taken",
+        "x": 12,
+        "y": 0
+      },
+      {
+        "id": "f0r1s6",
+        "kind": "mac",
+        "status": "taken",
+        "x": 15,
+        "y": 1
+      },
+      {
+        "id": "f0r2s1",
+        "kind": "mac",
+        "status": "taken",
+        "x": 0,
+        "y": 5
+      },
+      {
+        "id": "f0r2s2",
+        "kind": "mac",
+        "status": "taken",
+        "x": 3,
+        "y": 6
+      },
+      {
+        "id": "f0r2s3",
+        "kind": "mac",
+        "status": "broken",
+        "x": 6,
+        "y": 5
+      },
+      {
+        "id": "f0r2s4",
+        "kind": "mac",
+        "status": "taken",
+        "x": 9,
+        "y": 6
+      },
+      {
+        "id": "f0r2s5",
+        "kind": "mac",
+        "status": "taken",
+        "x": 12,
+        "y": 5
+      },
+      {
+        "id": "f0r2s6",
+        "kind": "mac",
+        "status": "taken",
+        "x": 15,
+        "y": 6
+      },
+      {
+        "id": "f0r2s7",
+        "kind": "mac",
+        "status": "taken",
+        "x": 18,
+        "y": 5
+      },
+      {
+        "id": "f0r2s8",
+        "kind": "mac",
+        "status": "taken",
+        "x": 26,
+        "y": 5
+      },
+      {
+        "id": "f0r2s9",
+        "kind": "mac",
+        "status": "taken",
+        "x": 29,
+        "y": 6
+      },
+      {
+        "id": "f0r2s10",
+        "kind": "mac",
+        "status": "taken",
+        "x": 32,
+        "y": 5
+      },
+      {
+        "id": "f0r2s11",
+        "kind": "mac",
+        "status": "free",
+        "x": 35,
+        "y": 6
+      },
+      {
+        "id": "f0r2s12",
+        "kind": "mac",
+        "status": "free",
+        "x": 38,
+        "y": 5
+      },
+      {
+        "id": "f0r2s13",
+        "kind": "mac",
+        "status": "free",
+        "x": 41,
+        "y": 6
+      },
+      {
+        "id": "f0r2s14",
+        "kind": "mac",
+        "status": "taken",
+        "x": 44,
+        "y": 5
+      },
+      {
+        "id": "f0r2s15",
+        "kind": "mac",
+        "status": "taken",
+        "x": 47,
+        "y": 6
+      },
+      {
+        "id": "f0r2s16",
+        "kind": "mac",
+        "status": "taken",
+        "x": 50,
+        "y": 5
+      },
+      {
+        "id": "f0r2s17",
+        "kind": "mac",
+        "status": "free",
+        "x": 61,
+        "y": 5
+      },
+      {
+        "id": "f0r2s18",
+        "kind": "mac",
+        "status": "taken",
+        "x": 64,
+        "y": 6
+      },
+      {
+        "id": "f0r2s19",
+        "kind": "mac",
+        "status": "taken",
+        "x": 67,
+        "y": 5
+      },
+      {
+        "id": "f0r2s20",
+        "kind": "mac",
+        "status": "taken",
+        "x": 70,
+        "y": 6
+      },
+      {
+        "id": "f0r2s21",
+        "kind": "mac",
+        "status": "free",
+        "x": 73,
+        "y": 5
+      },
+      {
+        "id": "f0r2s22",
+        "kind": "mac",
+        "status": "taken",
+        "x": 76,
+        "y": 6
+      },
+      {
+        "id": "f0r2s23",
+        "kind": "mac",
+        "status": "taken",
+        "x": 79,
+        "y": 5
+      }
+    ],
+    "zones": [
+      {
+        "attributes": ["silent"],
+        "name": "Z1",
+        "x": 5,
+        "y": 0
+      },
+      {
+        "attributes": [],
+        "name": "Z2",
+        "x": 35,
+        "y": 0
+      },
+      {
+        "attributes": [],
+        "name": "Z3",
+        "x": 65,
+        "y": 0
+      }
+    ]
+  },
+  "f1": {
+    "message": "",
+    "attributes": [],
+    "name": "F1",
+    "seats": [],
+    "zones": []
+  },
+  "f1b": {
+    "message": "",
+    "attributes": [],
+    "name": "F1B",
+    "seats": [],
+    "zones": []
+  },
+  "f2": {
+    "message": "",
+    "attributes": [],
+    "name": "F2",
+    "seats": [],
+    "zones": []
+  },
+  "f4": {
+    "message": "",
+    "attributes": [],
+    "name": "F4",
+    "seats": [],
+    "zones": []
+  },
+  "f6": {
+    "message": "",
+    "attributes": [],
+    "name": "F6",
+    "seats": [],
+    "zones": []
+  }
+}
