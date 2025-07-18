@@ -21,11 +21,11 @@ pub fn layout_from_json(input: TokenStream) -> TokenStream {
     let full_path = Path::new(&manifest_dir).join(&file_path);
 
     let json_content = fs::read_to_string(&full_path)
-        .unwrap_or_else(|e| panic!("Failed to read JSON file {}: {}", file_path, e));
+        .unwrap_or_else(|e| panic!("Failed to read JSON file {file_path}: {e}"));
 
     // Validate JSON structure at compile time
     let layout: cluster_core::models::Layout = serde_json::from_str(&json_content)
-        .unwrap_or_else(|e| panic!("Failed to parse JSON in {}: {}", file_path, e));
+        .unwrap_or_else(|e| panic!("Failed to parse JSON in {file_path}: {e}"));
 
     // Generate initialization code
     let layout_code = generate_layout_code(&layout);

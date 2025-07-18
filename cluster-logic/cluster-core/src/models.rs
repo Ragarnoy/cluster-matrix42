@@ -45,7 +45,7 @@ pub struct Seat {
 
 impl Seat {
     /// Get the display color for this seat based on its status and kind
-    pub fn color(&self) -> embedded_graphics::pixelcolor::Rgb565 {
+    pub const fn color(&self) -> embedded_graphics::pixelcolor::Rgb565 {
         match self.status {
             Status::Free => self.status.color(),
             Status::Taken => self.kind.taken_color(),
