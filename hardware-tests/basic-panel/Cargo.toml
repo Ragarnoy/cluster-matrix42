@@ -22,7 +22,6 @@ embassy-sync = { workspace = true }
 
 # No std deps
 static_cell = { workspace = true }
-heapless = { workspace = true }
 
 [lib]
 test = false

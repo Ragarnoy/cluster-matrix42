@@ -1,5 +1,6 @@
 //! Core types and enums for cluster representation
 
+use core::ops::Not;
 use embedded_graphics::prelude::RgbColor;
 use serde::{Deserialize, Serialize};
 
@@ -171,6 +172,19 @@ pub enum Status {
     Taken,
     Reported,
     Broken,
+}
+
+impl Not for Status {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Free => Self::Taken,
+            Self::Taken => Self::Free,
+            Self::Reported => Self::Free,
+            Self::Broken => Self::Free,
+        }
+    }
 }
 
 impl_enum_conversions!(
