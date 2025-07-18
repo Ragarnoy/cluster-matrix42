@@ -11,4 +11,4 @@ embedded-graphics = { workspace = true }
 # Shared animation logic
 cluster-core = { workspace = true, features = ["std"] }
 graphics-common = { workspace = true }
-cluster-core-macros = { workspace = true }
+cluster-macros = { workspace = true }

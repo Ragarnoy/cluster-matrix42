@@ -170,7 +170,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cluster-core-macros"
+name = "cluster-macros"
 version = "0.1.0"
 dependencies = [
  "cluster-core",
@@ -1519,7 +1519,7 @@ name = "simulator"
 version = "0.1.0"
 dependencies = [
  "cluster-core",
- "cluster-core-macros",
+ "cluster-macros",
  "embedded-graphics",
  "embedded-graphics-simulator",
  "graphics-common",

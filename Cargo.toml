@@ -2,13 +2,12 @@
 resolver = "3"
 members = [
     "graphics-common",
-    "cluster-core",
+    "cluster-logic/*",
     "applications/cluster-matrix-app",
     "applications/simulator",
     "drivers/hub75-rp2350-driver",
     # "drivers/hub75-driver",  #disabled
-    "hardware-tests/basic-panel"
-, "cluster-core-macros"]
+    "hardware-tests/basic-panel"]
 
 [profile.release]
 opt-level = "s"
@@ -22,8 +21,8 @@ lto = true
 [workspace.dependencies]
 # Local dependencies
 graphics-common = { path = "graphics-common" }
-cluster-core = { path = "cluster-core" }
-cluster-core-macros = { path = "cluster-core-macros" }
+cluster-core = { path = "cluster-logic/cluster-core" }
+cluster-macros = { path = "cluster-logic/cluster-macros" }
 #hub75-driver = { path = "hub75-driver" }
 hub75-rp2350-driver = { path = "drivers/hub75-rp2350-driver" }
 
