@@ -176,7 +176,7 @@ impl<'d> Hub75<'d> {
         state_machines.start();
 
         // Create driver instance
-        let mut driver = Self {
+        let driver = Self {
             _state_machines: state_machines,
             dma_fb: dma_channels.0,
             dma_fb_loop: dma_channels.1,
@@ -223,12 +223,12 @@ impl<'d> Hub75<'d> {
     ///
     /// This affects all subsequently drawn pixels.
     /// Existing pixels in the buffer are not affected.
-    pub fn set_brightness(&mut self, brightness: u8) {
+    pub const fn set_brightness(&mut self, brightness: u8) {
         self.brightness = brightness;
     }
 
     /// Get current brightness setting
-    pub fn get_brightness(&self) -> u8 {
+    pub const fn get_brightness(&self) -> u8 {
         self.brightness
     }
 
@@ -279,7 +279,7 @@ impl<'d> Hub75<'d> {
     }
 
     /// Setup DMA channels (CRITICAL: matches original exactly)
-    fn setup_dma(&mut self) {
+    fn setup_dma(&self) {
         use embassy_rp::pac::dma::regs::{ChTransCount, CtrlTrig};
         use embassy_rp::pac::dma::vals::{DataSize, TreqSel};
 
@@ -410,7 +410,7 @@ impl<'d> DrawTarget for Hub75<'d> {
     }
 }
 
-fn coord_transfer(point: &mut Point) {
+const fn coord_transfer(point: &mut Point) {
     if point.y < 64 {
         point.x += 128
     } else {

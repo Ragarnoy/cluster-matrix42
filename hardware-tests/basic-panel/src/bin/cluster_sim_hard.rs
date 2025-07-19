@@ -28,12 +28,13 @@ use {defmt_rtt as _, panic_probe as _};
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
 
-    let layout = match helpers::create_sample_layout() {
-        Ok(layout) => layout,
-        Err(_) => {
-            panic!("Failed to create sample cluster layout");
-        }
-    };
+    let layout = helpers::create_sample_layout().unwrap_or_else(|_| {
+        panic!("Failed to create sample cluster layout");
+    });
+    info!(
+        "Sample cluster layout created successfully, size of layout: {}",
+        size_of_val(&layout)
+    );
 
     let layout = &*LAYOUT.init(RwLock::new(layout));
     let selected_cluster = &*SELECTED_CLUSTER.init(Channel::new());

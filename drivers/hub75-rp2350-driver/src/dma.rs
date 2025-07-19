@@ -172,7 +172,7 @@ pub struct DmaStatus {
 
 impl DmaStatus {
     /// Check if all DMA channels are operating correctly
-    pub fn is_healthy(&self) -> bool {
+    pub const fn is_healthy(&self) -> bool {
         // At least one of the main channels should be busy
         (self.ch0_busy || self.ch2_busy) &&
             // Transfer counts should be reasonable

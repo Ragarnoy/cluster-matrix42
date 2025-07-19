@@ -74,7 +74,7 @@ impl DisplayMemory {
     }
 
     /// Get the currently inactive buffer for drawing
-    fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
+    const fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
         if self.current_buffer {
             &mut self.fb0
         } else {
@@ -148,22 +148,22 @@ impl DisplayMemory {
     }
 
     /// Get pointer to active framebuffer (for DMA)
-    pub fn get_active_buffer_ptr(&self) -> *mut u8 {
+    pub const fn get_active_buffer_ptr(&self) -> *mut u8 {
         self.fb_ptr
     }
 
     /// Get pointer to delay array (for DMA)
-    pub fn get_delay_ptr(&self) -> *mut u32 {
+    pub const fn get_delay_ptr(&self) -> *mut u32 {
         self.delay_ptr
     }
 
     /// Get pointer to the framebuffer pointer (for DMA chaining)
-    pub fn get_fb_ptr_addr(&self) -> *const *mut u8 {
+    pub const fn get_fb_ptr_addr(&self) -> *const *mut u8 {
         &self.fb_ptr as *const _
     }
 
     /// Get pointer to the delay pointer (for DMA chaining)
-    pub fn get_delay_ptr_addr(&self) -> *const *mut u32 {
+    pub const fn get_delay_ptr_addr(&self) -> *const *mut u32 {
         &self.delay_ptr as *const _
     }
 }
