@@ -190,13 +190,12 @@ async fn core1_task(
 ) {
     info!("Core 1 - LED heartbeat for cluster hardware test");
 
-    let mut counter = 0u32;
+    let mut counter = 0usize;
     loop {
         counter = counter.wrapping_add(1);
 
         let cluster_id = match counter % 7 {
-            0 => ClusterId::Hidden,
-            1 => ClusterId::F0,
+            0 | 1 => ClusterId::F0,
             2 => ClusterId::F1,
             3 => ClusterId::F1b,
             4 => ClusterId::F2,
@@ -206,18 +205,22 @@ async fn core1_task(
 
         sender.send(cluster_id).await;
 
-        for _ in 0..10 {
+        for _ in 0..5 {
             led.set_high();
-            Timer::after(Duration::from_secs(1)).await;
+            Timer::after(Duration::from_millis(500)).await;
             led.set_low();
-            Timer::after(Duration::from_secs(1)).await;
+            Timer::after(Duration::from_millis(500)).await;
         }
 
         if counter % 10 == 1 {
-            info!("Core 1 - Changing status of seat 0");
             let mut lock = layout.write().await;
-            let status = lock.f0.seats.get_mut(0).unwrap();
-            status.status = !status.status;
+            let seat_number = counter % lock.f0.seats.len();
+            if let Some(status) = lock.f0.seats.get_mut(seat_number) {
+                info!("Core 1 - Changing status of seat {}", seat_number);
+                status.status = !status.status;
+            } else {
+                warn!("Seat {} not found in f0 cluster", seat_number);
+            }
         }
     }
 }

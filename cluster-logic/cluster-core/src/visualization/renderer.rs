@@ -64,8 +64,8 @@ impl ClusterRenderer {
         self.render_floors_info(display, layout)?;
         self.render_cluster::<D>(display, selected_cluster)?;
         let stats = selected_cluster.get_stats();
-        let occupancy = (stats.available as f32 / stats.total as f32) * 100.0;
-        self.render_status_bar(display, occupancy as u8)?;
+        let occupancy = stats.occupancy_percentage();
+        self.render_status_bar(display, occupancy)?;
 
         Ok(())
     }
