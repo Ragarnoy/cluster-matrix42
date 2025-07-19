@@ -225,9 +225,9 @@ pub fn create_sample_layout() -> Result<Layout, &'static str> {
     let mut f1 = empty_cluster!("F1");
     f1.message = make_message_string("Coucou c'est F1 vide")?;
     let mut f1b = empty_cluster!("F1B");
-    f1b.message = make_message_string("Coucou c'est F1B vide")?;
+    f1b.message = make_message_string("Coucou c'est F1B VIP !")?;
     let mut f2 = empty_cluster!("F2");
-    f2.message = make_message_string("Coucou c'est F2 vide")?;
+    f2.message = make_message_string("Coucou c'est F2 vide :(")?;
     let mut f4 = empty_cluster!("F4");
     f4.message = make_message_string("Coucou c'est F4 chut")?;
     let mut f6 = empty_cluster!("F6");
