@@ -133,7 +133,7 @@ pub struct ClusterStats {
 
 impl ClusterStats {
     pub const fn occupancy_percentage(&self) -> u8 {
-        if self.total == 0 {
+        if self.total == 0 || self.occupied == 0 {
             0
         } else {
             ((self.occupied as u32 * 100) / self.total as u32) as u8

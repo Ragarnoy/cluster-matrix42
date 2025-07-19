@@ -15,5 +15,5 @@ where
     D: DrawTarget<Color = Rgb565>,
 {
     let renderer = ClusterRenderer::new();
-    renderer.render_frame::<D>(display, layout, &layout.f0, frame)
+    renderer.render_frame::<D>(display, layout, frame)
 }

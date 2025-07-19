@@ -87,7 +87,6 @@ dependencies = [
  "embassy-sync",
  "embassy-time",
  "graphics-common",
- "heapless",
  "hub75-rp2350-driver",
  "panic-probe",
  "static_cell",

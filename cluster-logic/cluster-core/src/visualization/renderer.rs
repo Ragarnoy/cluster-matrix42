@@ -1,7 +1,6 @@
 //! Cluster visualization renderer
 
 use crate::models::{Cluster, Layout, Seat};
-use crate::types::ClusterId::F0;
 use crate::types::{ClusterId, Kind, Status};
 use crate::visualization::display::{
     DEFAULT_LAYOUT, DISPLAY_WIDTH, DisplayLayout, FLOOR_BAR_SPACING, FLOOR_BARS_Y,
@@ -9,7 +8,6 @@ use crate::visualization::display::{
     MOTD_LINE_HEIGHT, MOTD_TEXT_Y, SPLIT_FLOOR_GAP, STATUS_BAR_HEIGHT, STATUS_BAR_SIDE_MARGIN,
     ZONE_TEXT_Y_OFFSET, visual,
 };
-use core::fmt::Write;
 use embedded_graphics::{
     mono_font::{MonoTextStyle, ascii::FONT_6X10},
     pixelcolor::Rgb565,
@@ -30,7 +28,7 @@ impl ClusterRenderer {
     pub const fn new() -> Self {
         Self {
             layout: DEFAULT_LAYOUT,
-            selected_cluster: F0,
+            selected_cluster: ClusterId::F0,
         }
     }
 
@@ -43,7 +41,6 @@ impl ClusterRenderer {
         &self,
         display: &mut D,
         layout: &Layout,
-        selected_cluster: &Cluster,
         frame: u32,
     ) -> Result<(), D::Error>
     where
@@ -52,11 +49,23 @@ impl ClusterRenderer {
         // Clear display
         display.clear(visual::BACKGROUND)?;
 
+        let selected_cluster = match self.selected_cluster {
+            ClusterId::Hidden => &layout.f0,
+            ClusterId::F0 => &layout.f0,
+            ClusterId::F1 => &layout.f1,
+            ClusterId::F1b => &layout.f1b,
+            ClusterId::F2 => &layout.f2,
+            ClusterId::F4 => &layout.f4,
+            ClusterId::F6 => &layout.f6,
+        };
+
         // Render each component
         Self::render_header(display, &selected_cluster.message, frame)?;
         self.render_floors_info(display, layout)?;
         self.render_cluster::<D>(display, selected_cluster)?;
-        self.render_status_bar(display, 33)?;
+        let stats = selected_cluster.get_stats();
+        let occupancy = stats.occupancy_percentage();
+        self.render_status_bar(display, occupancy)?;
 
         Ok(())
     }
@@ -134,8 +143,15 @@ impl ClusterRenderer {
             .draw(display)?;
 
         // Draw current floor text
-        let mut floor_num: String<3> = String::new();
-        write!(&mut floor_num, "F{}", 0).unwrap();
+        let floor_num: String<3> = match self.selected_cluster {
+            ClusterId::Hidden => String::new(),
+            ClusterId::F0 => String::try_from("F0").unwrap(),
+            ClusterId::F1 => String::try_from("F1").unwrap(),
+            ClusterId::F1b => String::try_from("F1b").unwrap(),
+            ClusterId::F2 => String::try_from("F2").unwrap(),
+            ClusterId::F4 => String::try_from("F4").unwrap(),
+            ClusterId::F6 => String::try_from("F6").unwrap(),
+        };
         let text_style = MonoTextStyle::new(&FONT_6X10, visual::TEXT_COLOR);
         Text::new(
             &floor_num,
@@ -152,7 +168,7 @@ impl ClusterRenderer {
                 FLOOR_BARS_Y as i32 + (6i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH,
-            self.selected_cluster == F0,
+            self.selected_cluster == ClusterId::F0,
         )?;
 
         let f1_width = ((FLOOR_INFO_WIDTH - SPLIT_FLOOR_GAP) * 60) / 100;
@@ -164,7 +180,7 @@ impl ClusterRenderer {
                 FLOOR_BARS_Y as i32 + (5i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             f1_width,
-            false,
+            self.selected_cluster == ClusterId::F1,
         )?;
 
         self.render_floor_info(
@@ -175,7 +191,7 @@ impl ClusterRenderer {
                 FLOOR_BARS_Y as i32 + (5i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH - SPLIT_FLOOR_GAP - f1_width,
-            false,
+            self.selected_cluster == ClusterId::F1b,
         )?;
 
         self.render_floor_info(
@@ -186,7 +202,7 @@ impl ClusterRenderer {
                 FLOOR_BARS_Y as i32 + (4i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH,
-            false,
+            self.selected_cluster == ClusterId::F2,
         )?;
 
         // Inactive floor - grey filled rectangle
@@ -208,7 +224,7 @@ impl ClusterRenderer {
                 FLOOR_BARS_Y as i32 + (2i32 * (MOTD_LINE_HEIGHT + FLOOR_BAR_SPACING) as i32),
             ),
             FLOOR_INFO_WIDTH,
-            false,
+            self.selected_cluster == ClusterId::F4,
         )?;
 
         // Inactive floor - grey filled rectangle
@@ -230,16 +246,17 @@ impl ClusterRenderer {
                 FLOOR_BARS_Y as i32, // At the top
             ),
             FLOOR_INFO_WIDTH,
-            false,
+            self.selected_cluster == ClusterId::F6,
         )?;
 
         Ok(())
     }
 
-    fn render_status_bar<D>(&self, display: &mut D, occupancy: u8) -> Result<(), D::Error>
+    fn render_status_bar<D>(&self, display: &mut D, mut occupancy: u8) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,
     {
+        occupancy = occupancy.clamp(0, 100);
         // Background for status bar
         self.layout
             .status_bar

@@ -1,6 +1,7 @@
 #![no_std]
 
 use cluster_core::models::Layout;
+use cluster_core::types::ClusterId;
 use embassy_executor::Executor;
 use embassy_rp::Peri;
 use embassy_rp::multicore::Stack;
@@ -9,15 +10,22 @@ use embassy_rp::peripherals::{
     PIN_8, PIN_9, PIN_10, PIN_11, PIN_12, PIN_13,
 };
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 use embassy_sync::rwlock::RwLock;
 use hub75_rp2350_driver::DisplayMemory;
 use static_cell::StaticCell;
+
+pub type LayoutLock = RwLock<CriticalSectionRawMutex, Layout>;
 
 // Multicore setup
 pub static mut CORE1_STACK: Stack<4096> = Stack::new();
 pub static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 pub static DISPLAY_MEMORY: StaticCell<DisplayMemory> = StaticCell::new();
-pub static LAYOUT: StaticCell<RwLock<CriticalSectionRawMutex, Layout>> = StaticCell::new();
+pub static LAYOUT: StaticCell<LayoutLock> = StaticCell::new();
+pub static SELECTED_CLUSTER: StaticCell<Channel<CriticalSectionRawMutex, ClusterId, 8>> =
+    StaticCell::new();
+
+pub mod helpers;
 
 pub struct Hub75Pins {
     // RGB data pins
