@@ -197,16 +197,24 @@ pub fn create_sample_layout() -> Result<Layout, &'static str> {
 
     let _ = zones.push(Zone {
         attributes: zone_attrs,
-        name: make_cluster_string("Z0")?,
-        x: 4,
+        name: make_cluster_string("Z1")?,
+        x: 5,
         y: 0,
     });
 
     let zone2_attrs = AttributeVec::new();
     let _ = zones.push(Zone {
         attributes: zone2_attrs,
-        name: make_cluster_string("")?,
-        x: 0,
+        name: make_cluster_string("Z2")?,
+        x: 35,
+        y: 1,
+    });
+
+    let zone3_attrs = AttributeVec::new();
+    let _ = zones.push(Zone {
+        attributes: zone3_attrs,
+        name: make_cluster_string("Z3")?,
+        x: 65,
         y: 1,
     });
 

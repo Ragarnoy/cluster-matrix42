@@ -8,7 +8,6 @@ default = []
 std = []
 
 [dependencies]
-embedded-graphics-core = { workspace = true }
 embedded-graphics = { workspace = true }
 heapless = { workspace = true }
 libm = { workspace = true }
