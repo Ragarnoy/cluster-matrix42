@@ -2,6 +2,7 @@
 
 use crate::config::*;
 use crate::lut::GAMMA8;
+use core::mem::MaybeUninit;
 use embedded_graphics_core::pixelcolor::Rgb565;
 use embedded_graphics_core::prelude::RgbColor;
 
@@ -38,20 +39,46 @@ impl Default for DisplayMemory {
 }
 
 impl DisplayMemory {
-    /// Create a new display memory instance
-    pub const fn new() -> Self {
-        let fb0 = [0u8; FRAME_SIZE];
-        let fb1 = [0u8; FRAME_SIZE];
-        let delays = compute_bcm_delays();
+    /// Create a new display memory instance using MaybeUninit for safe initialization
+    pub fn new() -> Self {
+        unsafe {
+            let mut memory = MaybeUninit::<Self>::uninit();
+            let ptr = memory.as_mut_ptr();
 
-        Self {
-            fb_ptr: core::ptr::null_mut(), // Will be initialized properly later
-            fb0,
-            fb1,
-            delays,
-            delay_ptr: core::ptr::null_mut(), // Will be initialized properly later
-            current_buffer: false,
+            // Initialize framebuffers to zero
+            core::ptr::write_bytes(
+                core::ptr::addr_of_mut!((*ptr).fb0) as *mut u8,
+                0,
+                FRAME_SIZE,
+            );
+            core::ptr::write_bytes(
+                core::ptr::addr_of_mut!((*ptr).fb1) as *mut u8,
+                0,
+                FRAME_SIZE,
+            );
+
+            // Initialize delays
+            core::ptr::write(core::ptr::addr_of_mut!((*ptr).delays), compute_bcm_delays());
+
+            // Initialize other fields
+            core::ptr::write(
+                core::ptr::addr_of_mut!((*ptr).fb_ptr),
+                core::ptr::null_mut(),
+            );
+            core::ptr::write(
+                core::ptr::addr_of_mut!((*ptr).delay_ptr),
+                core::ptr::null_mut(),
+            );
+            core::ptr::write(core::ptr::addr_of_mut!((*ptr).current_buffer), false);
+
+            memory.assume_init()
         }
+    }
+
+    /// Initialize pointers after creation
+    pub fn init_pointers(&mut self) {
+        self.fb_ptr = self.fb0.as_mut_ptr();
+        self.delay_ptr = self.delays.as_mut_ptr();
     }
 
     /// Commit the drawn buffer and make it active for display
