@@ -101,7 +101,7 @@ impl DisplayMemory {
     }
 
     /// Get the currently inactive buffer for drawing
-    const fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
+    fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
         if self.current_buffer {
             &mut self.fb0
         } else {
@@ -125,7 +125,6 @@ impl DisplayMemory {
         let h = y > (DISPLAY_HEIGHT / 2) - 1;
         let shift = if h { 3 } else { 0 };
 
-        // CRITICAL: Original color channel mapping (swapped!)
         let mut c_r: u16;
         let mut c_b: u16;
         let mut c_g: u16;
@@ -158,14 +157,15 @@ impl DisplayMemory {
             let packed_rgb = (cb << 2 | cg << 1 | cr) as u8;
             let idx = base_idx + b * DISPLAY_WIDTH;
 
-            // CRITICAL: Original buffer selection logic (inverted!)
-            if self.fb_ptr == self.fb0.as_mut_ptr() {
-                self.fb1[idx] &= !(0b111 << shift);
-                self.fb1[idx] |= packed_rgb << shift;
+            // Use current_buffer flag instead of pointer comparison
+            let draw_buffer = if self.current_buffer {
+                &mut self.fb0
             } else {
-                self.fb0[idx] &= !(0b111 << shift);
-                self.fb0[idx] |= packed_rgb << shift;
-            }
+                &mut self.fb1
+            };
+
+            draw_buffer[idx] &= !(0b111 << shift);
+            draw_buffer[idx] |= packed_rgb << shift;
         }
     }
 
