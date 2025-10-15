@@ -11,7 +11,7 @@ use basic_panel::{
 use cluster_core::types::ClusterId;
 use cluster_core::visualization::ClusterRenderer;
 use core::ptr::addr_of_mut;
-use defmt::{Debug2Format, info, warn};
+use defmt::{Debug2Format, info, unwrap, warn};
 use embassy_executor::{Executor, Spawner};
 use embassy_rp::gpio::Output;
 use embassy_rp::multicore::spawn_core1;
@@ -51,7 +51,7 @@ async fn main(spawner: Spawner) {
         move || {
             let executor1 = EXECUTOR1.init(Executor::new());
             executor1.run(|spawner| {
-                spawner.spawn(core1_task(led, layout, tx)).unwrap();
+                spawner.spawn(unwrap!(core1_task(led, layout, tx)));
             });
         },
     );
@@ -82,9 +82,13 @@ async fn main(spawner: Spawner) {
     };
 
     // Core 0 handles Hub75 matrix with cluster visualization
-    spawner
-        .spawn(cluster_matrix_task(p.PIO0, dma_channels, pins, layout, rx))
-        .unwrap();
+    spawner.spawn(unwrap!(cluster_matrix_task(
+        p.PIO0,
+        dma_channels,
+        pins,
+        layout,
+        rx
+    )));
 }
 
 #[embassy_executor::task]

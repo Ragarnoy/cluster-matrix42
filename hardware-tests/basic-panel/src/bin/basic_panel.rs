@@ -5,7 +5,7 @@
 
 use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use core::ptr::addr_of_mut;
-use defmt::info;
+use defmt::{info, unwrap};
 use embassy_executor::{Executor, Spawner};
 use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
@@ -27,7 +27,7 @@ async fn main(spawner: Spawner) {
         move || {
             let executor1 = EXECUTOR1.init(Executor::new());
             executor1.run(|spawner| {
-                spawner.spawn(core1_task(led)).unwrap();
+                spawner.spawn(unwrap!(core1_task(led)));
             });
         },
     );
@@ -60,9 +60,7 @@ async fn main(spawner: Spawner) {
     };
 
     // Core 0 handles Hub75 matrix with PIO + DMA
-    spawner
-        .spawn(matrix_task(p.PIO0, dma_channels, pins))
-        .unwrap();
+    spawner.spawn(unwrap!(matrix_task(p.PIO0, dma_channels, pins)));
 }
 
 #[embassy_executor::task]
