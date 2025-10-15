@@ -142,7 +142,7 @@ async fn cluster_matrix_task(
         let fps = if micros > 0 { 1_000_000 / micros } else { 0 };
         last_time = current_time;
 
-        if frame_counter % 60 == 0 {
+        if frame_counter.is_multiple_of(60) {
             info!("Cluster visualization FPS: {}", fps);
             if let Ok(cluster_id) = receiver.try_receive() {
                 info!("Selected cluster: {:?}", Debug2Format(&cluster_id));
@@ -169,7 +169,7 @@ async fn cluster_matrix_task(
             display.commit();
             let commit_time = commit_start.elapsed();
 
-            if frame_counter % 60 == 0 {
+            if frame_counter.is_multiple_of(60) {
                 info!(
                     "Cluster draw time: {}us, Buffer commit time: {}us",
                     anim_time.as_micros(),
