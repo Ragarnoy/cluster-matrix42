@@ -8,6 +8,7 @@
 
 use core::cell::UnsafeCell;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
+use embassy_net::tcp::{ConnectError, Error};
 use embassy_net::{dns::DnsQueryType, Stack};
 use embedded_nal_async_08::{Dns, TcpConnect};
 
@@ -40,8 +41,8 @@ pub struct StackAdapter<'a> {
     tx_buffer: UnsafeCell<[u8; TCP_TX_BUFFER_SIZE]>,
 }
 
-// Safety: The adapter is designed for single-threaded embassy executor
-// and reqwless only creates one connection at a time
+/// Safety: The adapter is designed for single-threaded embassy executor
+/// and reqwless only creates one connection at a time
 unsafe impl<'a> Sync for StackAdapter<'a> {}
 
 impl<'a> StackAdapter<'a> {
@@ -58,7 +59,7 @@ impl<'a> StackAdapter<'a> {
 
 // Implement TcpConnect trait from embedded-nal-async 0.8
 impl<'a> TcpConnect for StackAdapter<'a> {
-    type Error = embassy_net::tcp::Error;
+    type Error = Error;
     type Connection<'m>
         = embassy_net::tcp::TcpSocket<'m>
     where
@@ -81,24 +82,22 @@ impl<'a> TcpConnect for StackAdapter<'a> {
         // Convert SocketAddr to IpEndpoint (embassy-net uses IpEndpoint internally)
         let endpoint = match remote {
             SocketAddr::V4(addr) => (*addr.ip(), addr.port()),
-            SocketAddr::V6(_) => return Err(embassy_net::tcp::Error::ConnectionReset), // IPv6 not supported in this path
+            SocketAddr::V6(_) => return Err(Error::ConnectionReset), // IPv6 not supported in this path
         };
 
-        socket.connect(endpoint).await.map_err(|e| match e {
+        socket.connect(endpoint).await.map_err(|e| {
             #[cfg(feature = "defmt")]
-            e => {
+            {
                 defmt::warn!("Connection error: {:?}", e);
-                embassy_net::tcp::Error::ConnectionReset
+                Error::ConnectionReset
             }
             #[cfg(not(feature = "defmt"))]
-            embassy_net::tcp::ConnectError::InvalidState => {
-                embassy_net::tcp::Error::ConnectionReset
+            match e {
+                ConnectError::InvalidState => Error::ConnectionReset,
+                ConnectError::NoRoute => Error::ConnectionReset,
+                ConnectError::ConnectionReset => Error::ConnectionReset,
+                ConnectError::TimedOut => Error::ConnectionReset,
             }
-            embassy_net::tcp::ConnectError::NoRoute => embassy_net::tcp::Error::ConnectionReset,
-            embassy_net::tcp::ConnectError::ConnectionReset => {
-                embassy_net::tcp::Error::ConnectionReset
-            }
-            embassy_net::tcp::ConnectError::TimedOut => embassy_net::tcp::Error::ConnectionReset,
         })?;
         Ok(socket)
     }
