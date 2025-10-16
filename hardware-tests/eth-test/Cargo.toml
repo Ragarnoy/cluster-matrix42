@@ -16,7 +16,7 @@ cluster-net = { workspace = true, features = ["defmt"] }
 # Logging dependencies
 defmt = { workspace = true }
 panic-probe = { workspace = true, features = ["print-defmt"] }
-defmt-rtt = "1.0.0"
+defmt-rtt = { workspace = true }
 
 # Embassy dependencies
 cortex-m-rt = { workspace = true }

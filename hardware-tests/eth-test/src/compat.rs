@@ -7,7 +7,8 @@
 //! sufficient for reqwless's usage pattern.
 
 use core::cell::UnsafeCell;
-use core::net::{IpAddr, Ipv4Addr, SocketAddr};
+use core::fmt::Write;
+use core::net::{IpAddr, SocketAddr};
 #[cfg(not(feature = "defmt"))]
 use embassy_net::tcp::ConnectError;
 use embassy_net::tcp::Error;
@@ -19,18 +20,17 @@ pub const TCP_TX_BUFFER_SIZE: usize = 4096;
 
 // Convert embassy-net IpAddress to core::net::IpAddr
 // This is a workaround for the type conversion between smoltcp and core::net types
-fn convert_ip_addr(addr: embassy_net::IpAddress) -> IpAddr {
-    // Use format/parse as a workaround since we can't match on smoltcp types
+fn convert_ip_addr(addr: embassy_net::IpAddress) -> Result<IpAddr, embassy_net::dns::Error> {
     use core::str::FromStr;
     use heapless::String;
 
     // Format the IP address into a string
-    let mut ip_str: String<40> = String::new();
-    use core::fmt::Write;
-    let _ = write!(&mut ip_str, "{}", addr);
+    // IPv6 addresses can be up to 45 characters: "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"
+    let mut ip_str: String<46> = String::new();
+    write!(&mut ip_str, "{}", addr).map_err(|_| embassy_net::dns::Error::Failed)?;
 
     // Parse it back as core::net::IpAddr
-    IpAddr::from_str(ip_str.as_str()).unwrap_or(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)))
+    IpAddr::from_str(ip_str.as_str()).map_err(|_| embassy_net::dns::Error::Failed)
 }
 
 /// Compatibility adapter for embassy-net Stack with buffer storage
@@ -123,7 +123,7 @@ impl<'a> Dns for StackAdapter<'a> {
 
         let addr = self.stack.dns_query(host, query_type).await?;
         let ip = addr.first().ok_or(embassy_net::dns::Error::Failed)?;
-        Ok(convert_ip_addr(*ip))
+        convert_ip_addr(*ip)
     }
 
     async fn get_host_by_address(
