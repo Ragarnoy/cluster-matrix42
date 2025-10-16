@@ -85,6 +85,12 @@ impl<'a> TcpConnect for StackAdapter<'a> {
         };
 
         socket.connect(endpoint).await.map_err(|e| match e {
+            #[cfg(feature = "defmt")]
+            e => {
+                defmt::warn!("Connection error: {:?}", e);
+                embassy_net::tcp::Error::ConnectionReset
+            }
+            #[cfg(not(feature = "defmt"))]
             embassy_net::tcp::ConnectError::InvalidState => {
                 embassy_net::tcp::Error::ConnectionReset
             }
