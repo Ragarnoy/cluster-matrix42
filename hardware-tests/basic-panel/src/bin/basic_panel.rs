@@ -5,7 +5,7 @@
 
 use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use core::ptr::addr_of_mut;
-use defmt::info;
+use defmt::{info, unwrap};
 use embassy_executor::{Executor, Spawner};
 use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
@@ -27,7 +27,7 @@ async fn main(spawner: Spawner) {
         move || {
             let executor1 = EXECUTOR1.init(Executor::new());
             executor1.run(|spawner| {
-                spawner.spawn(core1_task(led)).unwrap();
+                spawner.spawn(unwrap!(core1_task(led)));
             });
         },
     );
@@ -60,9 +60,7 @@ async fn main(spawner: Spawner) {
     };
 
     // Core 0 handles Hub75 matrix with PIO + DMA
-    spawner
-        .spawn(matrix_task(p.PIO0, dma_channels, pins))
-        .unwrap();
+    spawner.spawn(unwrap!(matrix_task(p.PIO0, dma_channels, pins)));
 }
 
 #[embassy_executor::task]
@@ -111,7 +109,7 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         let fps = if micros > 0 { 1_000_000 / micros } else { 0 };
         last_time = current_time;
 
-        if frame_counter % 60 == 0 {
+        if frame_counter.is_multiple_of(60) {
             info!("Animation FPS: {}", fps);
         }
 
@@ -133,7 +131,7 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         display.commit();
         let commit_time = commit_start.elapsed();
 
-        if frame_counter % 60 == 0 {
+        if frame_counter.is_multiple_of(60) {
             info!(
                 "Animation draw time: {}us, Buffer commit time: {}us",
                 anim_time.as_micros(),

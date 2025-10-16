@@ -1,0 +1,38 @@
+[package]
+name = "eth-test"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["defmt"]
+defmt = []
+tls = ["cluster-net/tls"]
+
+[dependencies]
+# Local dependencies
+cluster-core = { workspace = true }
+cluster-net = { workspace = true, features = ["defmt"] }
+
+# Logging dependencies
+defmt = { workspace = true }
+panic-probe = { workspace = true, features = ["print-defmt"] }
+defmt-rtt = { workspace = true }
+
+# Embassy dependencies
+cortex-m-rt = { workspace = true }
+embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
+embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
+
+# Networking
+embassy-net = { git = "https://github.com/embassy-rs/embassy", features = ["defmt", "tcp", "dns", "dhcpv4", "medium-ethernet"] }
+embassy-net-wiznet = { git = "https://github.com/embassy-rs/embassy", features = ["defmt"] }
+
+# HAL and utilities
+embedded-hal-bus = { version = "0.3.0", features = ["async"] }
+static_cell = { workspace = true }
+heapless = "0.9.1"
+
+# Compatibility layer for embedded-nal-async 0.8
+embedded-nal-async-08 = { package = "embedded-nal-async", version = "0.8" }

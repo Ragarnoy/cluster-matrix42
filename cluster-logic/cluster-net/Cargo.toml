@@ -1,0 +1,33 @@
+[package]
+name = "cluster-net"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+std = ["serde/std", "cluster-core/std"]
+defmt = ["dep:defmt", "reqwless/defmt"]
+tls = ["reqwless/embedded-tls", "dep:embedded-tls", "dep:rand"]
+
+[dependencies]
+# HTTP client
+reqwless = { version = "0.13", default-features = false }
+# Note: Using 0.8 to match reqwless, Stack doesn't implement this version's traits
+embedded-nal-async = "0.8"
+
+# TLS support (optional)
+embedded-tls = { version = "0.17", default-features = false, optional = true }
+rand = { version = "0.9.2", default-features = false, optional = true }
+
+# Serialization
+serde = { version = "1.0.228", default-features = false, features = ["derive"] }
+serde-json-core = "0.6"
+
+# No-std data structures
+heapless = { workspace = true }
+
+# Local dependencies
+cluster-core = { workspace = true }
+
+# Optional logging
+defmt = { workspace = true, optional = true }

@@ -7,7 +7,9 @@ members = [
     "applications/simulator",
     "drivers/hub75-rp2350-driver",
     # "drivers/hub75-driver",  #disabled
-    "hardware-tests/basic-panel"]
+    "hardware-tests/basic-panel",
+    "hardware-tests/eth-test",
+]
 
 [profile.release]
 opt-level = "s"
@@ -23,6 +25,7 @@ lto = true
 graphics-common = { path = "graphics-common" }
 cluster-core = { path = "cluster-logic/cluster-core" }
 cluster-macros = { path = "cluster-logic/cluster-macros" }
+cluster-net = { path = "cluster-logic/cluster-net" }
 #hub75-driver = { path = "hub75-driver" } not using it anymore
 hub75-rp2350-driver = { path = "drivers/hub75-rp2350-driver" }
 
