@@ -8,7 +8,9 @@
 
 use core::cell::UnsafeCell;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
-use embassy_net::tcp::{ConnectError, Error};
+#[cfg(not(feature = "defmt"))]
+use embassy_net::tcp::ConnectError;
+use embassy_net::tcp::Error;
 use embassy_net::{dns::DnsQueryType, Stack};
 use embedded_nal_async_08::{Dns, TcpConnect};
 
@@ -120,7 +122,8 @@ impl<'a> Dns for StackAdapter<'a> {
         };
 
         let addr = self.stack.dns_query(host, query_type).await?;
-        Ok(convert_ip_addr(addr[0]))
+        let ip = addr.first().ok_or(embassy_net::dns::Error::Failed)?;
+        Ok(convert_ip_addr(*ip))
     }
 
     async fn get_host_by_address(
