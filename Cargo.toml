@@ -48,5 +48,5 @@ embassy-sync = { git = "https://github.com/embassy-rs/embassy" }
 
 # Misc dependencies
 static_cell = "2.1"
-heapless = "0.8.0"
+heapless = "0.9.2"
 libm = "0.2.15"
