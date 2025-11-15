@@ -4,7 +4,6 @@
 #![no_main]
 
 use cluster_core::parsing::Layout;
-use defmt::export::display;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
 use embassy_rp::multicore::Stack;
@@ -81,9 +80,7 @@ async fn main(spawner: Spawner) {
     };
 
     // Core 0 handles Hub75 matrix with PIO + DMA
-    spawner
-        .spawn(matrix_task(p.PIO0, dma_channels, pins))
-        .unwrap();
+    spawner.spawn(matrix_task(p.PIO0, dma_channels, pins).unwrap());
 }
 
 enum ErrorState {

@@ -7,6 +7,9 @@ edition = "2024"
 hub75-rp2350-driver = { workspace = true }
 graphics-common = { workspace = true }
 cluster-core = { workspace = true }
+plugin-host = { path = "../../plugins/plugin-host", features = ["defmt"] }
+plugin-api = { path = "../../plugins/plugin-api" }
+embedded-graphics-core = { workspace = true }
 
 # Logging dependencies
 defmt = { workspace = true }
@@ -34,6 +37,11 @@ bench = false
 
 [[bin]]
 name = "cluster_sim_hard"
+test = false
+bench = false
+
+[[bin]]
+name = "plugin_test"
 test = false
 bench = false
 

@@ -116,11 +116,11 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         // Measure animation frame drawing time
         let anim_start = embassy_time::Instant::now();
 
-        //animations::quadrant::draw_animation_frame(&mut display, frame_counter).unwrap();
+        animations::quadrant::draw_animation_frame(&mut display, frame_counter).unwrap();
         // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
 
         // animations::arrow::draw_animation_frame(&mut display, frame_counter).unwrap();
-        animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_pattern();
 
         let anim_time = anim_start.elapsed();
