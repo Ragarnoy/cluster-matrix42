@@ -12,7 +12,7 @@ use core::net::{IpAddr, SocketAddr};
 #[cfg(not(feature = "defmt"))]
 use embassy_net::tcp::ConnectError;
 use embassy_net::tcp::Error;
-use embassy_net::{dns::DnsQueryType, Stack};
+use embassy_net::{Stack, dns::DnsQueryType};
 use embedded_nal_async_08::{Dns, TcpConnect};
 
 pub const TCP_RX_BUFFER_SIZE: usize = 4096;

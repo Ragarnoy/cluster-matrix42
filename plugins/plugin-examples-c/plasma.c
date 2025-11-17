@@ -1,4 +1,3 @@
-// plugins/plugin-examples-c/plasma.c
 #include <stdint.h>
 #include "plugin_api.h"
 #include "plugin_helpers.h"

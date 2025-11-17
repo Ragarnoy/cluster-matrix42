@@ -220,7 +220,7 @@ async fn test_http_client(stack: Stack<'static>) {
 /// Test HTTPS client functionality (only with TLS feature)
 #[cfg(feature = "tls")]
 async fn test_https_client(stack: Stack<'static>) {
-    use cluster_net::tls::{create_tls_config, TLS_BUFFER_SIZE};
+    use cluster_net::tls::{TLS_BUFFER_SIZE, create_tls_config};
 
     info!("=== HTTPS Client Test ===");
 
