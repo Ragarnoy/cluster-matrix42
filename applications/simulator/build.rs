@@ -1,6 +1,7 @@
 //! Build script for the simulator
 //!
-//! Compiles C and Rust plugins to native shared libraries (.so on Linux, .dylib on macOS, .dll on Windows)
+//! When the "plugin" feature is enabled, compiles C and Rust plugins
+//! to native shared libraries (.so on Linux, .dylib on macOS, .dll on Windows)
 
 use std::env;
 use std::path::PathBuf;
@@ -10,6 +11,11 @@ const C_PLUGINS: &[&str] = &["plasma", "quadrant"];
 const RUST_PLUGINS: &[&str] = &["bouncing_ball", "quadrant_rust"];
 
 fn main() {
+    // Only compile plugins when the "plugin" feature is enabled
+    if env::var("CARGO_FEATURE_PLUGIN").is_err() {
+        return;
+    }
+
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let plugins_dir = manifest_dir
@@ -207,7 +213,7 @@ fn generate_plugin_list(
     let mut code = String::new();
 
     // C plugins (use name-prefixed symbols: plasma_init, plasma_update, etc.)
-    code.push_str("/// List of compiled native C plugins (name, path, uses_prefixed_symbols)\n");
+    code.push_str("/// List of compiled native C plugins (name, path)\n");
     code.push_str("pub const NATIVE_C_PLUGINS: &[(&str, &str)] = &[\n");
     for (name, path) in c_plugins {
         code.push_str(&format!("    (\"{}\", \"{}\"),\n", name, path));
