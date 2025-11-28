@@ -2,75 +2,157 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const PLUGIN_NAMES: &[&str] = &["plasma", "quadrant"];
-
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let target = env::var("TARGET").unwrap();
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let plugin_src_dir = manifest_dir.parent().unwrap().join("plugin-examples-c");
-    let header_file = plugin_src_dir.join("common").join("plugin_api.h");
+    let c_plugin_dir = manifest_dir.parent().unwrap().join("plugin-examples-c");
+    let rust_plugin_dir = manifest_dir.parent().unwrap().join("plugin-examples-rust");
+
+    // Auto-discover C plugins (any .c file in plugin-examples-c, excluding common/)
+    let c_plugins = discover_c_plugins(&c_plugin_dir);
+    // Auto-discover Rust plugins (any subdirectory with Cargo.toml in plugin-examples-rust)
+    let rust_plugins = discover_rust_plugins(&rust_plugin_dir);
+
+    // Track directories for rebuild on new plugin addition
+    println!("cargo:rerun-if-changed={}", c_plugin_dir.display());
+    println!("cargo:rerun-if-changed={}", rust_plugin_dir.display());
 
     // Track C source files and headers for rebuild
+    let header_file = c_plugin_dir.join("common").join("plugin_api.h");
     println!("cargo:rerun-if-changed={}", header_file.display());
     println!(
         "cargo:rerun-if-changed={}",
-        plugin_src_dir.join("common/plugin_helpers.h").display()
+        c_plugin_dir.join("common/plugin_helpers.h").display()
     );
     println!(
         "cargo:rerun-if-changed={}",
-        plugin_src_dir.join("common/plugin.ld").display()
+        c_plugin_dir.join("common/plugin.ld").display()
     );
-    for plugin in PLUGIN_NAMES {
+    for plugin in &c_plugins {
         println!(
             "cargo:rerun-if-changed={}",
-            plugin_src_dir.join(format!("{}.c", plugin)).display()
+            c_plugin_dir.join(format!("{}.c", plugin)).display()
         );
     }
 
-    // Check if GCC is available
+    // Track Rust plugin source files for rebuild
+    for plugin in &rust_plugins {
+        println!(
+            "cargo:rerun-if-changed={}",
+            rust_plugin_dir.join(plugin).join("src/lib.rs").display()
+        );
+        println!(
+            "cargo:rerun-if-changed={}",
+            rust_plugin_dir.join(plugin).join("src/main.rs").display()
+        );
+        println!(
+            "cargo:rerun-if-changed={}",
+            rust_plugin_dir.join(plugin).join("Cargo.toml").display()
+        );
+    }
+
+    if !target.contains("thumbv8m") {
+        generate_empty_plugin_list(&out_dir);
+        return;
+    }
+
+    let mut successful_plugins = Vec::new();
+
+    // Compile C plugins
     if Command::new("arm-none-eabi-gcc")
         .arg("--version")
         .output()
-        .is_err()
+        .is_ok()
+        && header_file.exists()
     {
-        println!("cargo:warning=arm-none-eabi-gcc not found, skipping plugin compilation");
-        generate_empty_plugin_list(&out_dir, &target);
-        return;
-    }
-
-    if !header_file.exists() {
-        println!("cargo:warning=plugin_api.h not found, skipping plugin compilation");
-        generate_empty_plugin_list(&out_dir, &target);
-        return;
-    }
-
-    if target.contains("thumbv8m") {
-        let mut successful_plugins = Vec::new();
-
-        for plugin in PLUGIN_NAMES {
-            match compile_plugin(&plugin_src_dir, &out_dir, plugin) {
+        for plugin in &c_plugins {
+            match compile_c_plugin(&c_plugin_dir, &out_dir, plugin) {
                 Ok(()) => {
-                    successful_plugins.push(*plugin);
-                    println!("cargo:warning=Successfully compiled plugin: {}", plugin);
+                    successful_plugins.push(plugin.clone());
+                    println!("cargo:warning=Successfully compiled C plugin: {}", plugin);
                 }
                 Err(e) => {
-                    println!("cargo:warning=Failed to compile plugin {}: {}", plugin, e);
+                    println!("cargo:warning=Failed to compile C plugin {}: {}", plugin, e);
                 }
             }
         }
-
-        if successful_plugins.is_empty() {
-            generate_empty_plugin_list(&out_dir, &target);
-        } else {
-            generate_plugin_includes(&out_dir, &successful_plugins);
-        }
     } else {
-        generate_empty_plugin_list(&out_dir, &target);
+        println!("cargo:warning=arm-none-eabi-gcc not found or header missing, skipping C plugins");
+    }
+
+    // Compile Rust plugins
+    for plugin in &rust_plugins {
+        match compile_rust_plugin(&rust_plugin_dir, &out_dir, plugin) {
+            Ok(()) => {
+                successful_plugins.push(plugin.clone());
+                println!(
+                    "cargo:warning=Successfully compiled Rust plugin: {}",
+                    plugin
+                );
+            }
+            Err(e) => {
+                println!(
+                    "cargo:warning=Failed to compile Rust plugin {}: {}",
+                    plugin, e
+                );
+            }
+        }
+    }
+
+    if successful_plugins.is_empty() {
+        generate_empty_plugin_list(&out_dir);
+    } else {
+        generate_plugin_includes(&out_dir, &successful_plugins);
     }
 }
 
-fn compile_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), String> {
+/// Discover C plugins by scanning for .c files in the plugin directory
+fn discover_c_plugins(c_plugin_dir: &Path) -> Vec<String> {
+    let mut plugins = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(c_plugin_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension() {
+                    if ext == "c" {
+                        if let Some(stem) = path.file_stem() {
+                            plugins.push(stem.to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    plugins.sort();
+    plugins
+}
+
+/// Discover Rust plugins by scanning for subdirectories with Cargo.toml
+fn discover_rust_plugins(rust_plugin_dir: &Path) -> Vec<String> {
+    let mut plugins = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(rust_plugin_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                // Check if it has a Cargo.toml
+                if path.join("Cargo.toml").exists() {
+                    if let Some(name) = path.file_name() {
+                        plugins.push(name.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    plugins.sort();
+    plugins
+}
+
+fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), String> {
     let src_file = src_dir.join(format!("{}.c", name));
 
     if !src_file.exists() {
@@ -114,12 +196,11 @@ fn compile_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), Stri
         ));
     }
 
-    // Only continue if object file was created
     if !obj_file.exists() {
         return Err("Object file was not created".to_string());
     }
 
-    // Link - create a minimal linker script if needed
+    // Link
     let ld_script = src_dir.join("common/plugin.ld");
     if !ld_script.exists() {
         println!("cargo:warning=Creating default linker script");
@@ -166,7 +247,78 @@ fn compile_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), Stri
     Ok(())
 }
 
-fn generate_empty_plugin_list(out_dir: &Path, _target: &str) {
+fn compile_rust_plugin(rust_plugin_dir: &Path, out_dir: &Path, name: &str) -> Result<(), String> {
+    let plugin_dir = rust_plugin_dir.join(name);
+
+    if !plugin_dir.exists() {
+        return Err(format!(
+            "Plugin directory not found: {}",
+            plugin_dir.display()
+        ));
+    }
+
+    // Build the plugin with cargo for the embedded target
+    // Uses pre-installed target (rustup target add thumbv8m.main-none-eabihf)
+    let output = Command::new("cargo")
+        .args([
+            "build",
+            "--release",
+            "--target",
+            "thumbv8m.main-none-eabihf",
+            "--manifest-path",
+            plugin_dir.join("Cargo.toml").to_str().unwrap(),
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run cargo: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        println!("cargo:warning=Cargo build failed for {}:", name);
+        for line in stderr.lines().take(20) {
+            println!("cargo:warning=  {}", line);
+        }
+        return Err("Cargo build failed".to_string());
+    }
+
+    // Find the built ELF file
+    let elf_file = rust_plugin_dir
+        .join("target/thumbv8m.main-none-eabihf/release")
+        .join(name);
+
+    if !elf_file.exists() {
+        return Err(format!("Built ELF not found at: {}", elf_file.display()));
+    }
+
+    // Convert ELF to binary
+    let bin_file = out_dir.join(format!("{}.bin", name));
+
+    let output = Command::new("arm-none-eabi-objcopy")
+        .args([
+            "-O",
+            "binary",
+            elf_file.to_str().unwrap(),
+            bin_file.to_str().unwrap(),
+        ])
+        .output()
+        .map_err(|e| format!("objcopy failed: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("objcopy failed: {}", stderr));
+    }
+
+    if let Ok(metadata) = std::fs::metadata(&bin_file) {
+        println!(
+            "cargo:warning=Plugin {} size: {} bytes",
+            name,
+            metadata.len()
+        );
+    }
+
+    Ok(())
+}
+
+fn generate_empty_plugin_list(out_dir: &Path) {
     let code = r#"
         #[cfg(target_arch = "arm")]
         pub mod plugins {}
@@ -178,12 +330,12 @@ fn generate_empty_plugin_list(out_dir: &Path, _target: &str) {
     std::fs::write(out_dir.join("plugin_includes.rs"), code).unwrap();
 }
 
-fn generate_plugin_includes(out_dir: &Path, plugins: &[&str]) {
+fn generate_plugin_includes(out_dir: &Path, plugins: &[String]) {
     let mut code = String::from("pub mod plugins {\n");
     for plugin in plugins {
         code.push_str(&format!(
             "    pub const {}_BYTES: &[u8] = include_bytes!(\"{}/{}.bin\");\n",
-            plugin.to_uppercase(),
+            plugin.to_uppercase().replace('-', "_"),
             out_dir.display(),
             plugin
         ));
@@ -196,7 +348,7 @@ fn generate_plugin_includes(out_dir: &Path, plugins: &[&str]) {
         code.push_str(&format!(
             "        (\"{}\", plugins::{}_BYTES),\n",
             plugin,
-            plugin.to_uppercase()
+            plugin.to_uppercase().replace('-', "_")
         ));
     }
     code.push_str("    ]\n}\n");

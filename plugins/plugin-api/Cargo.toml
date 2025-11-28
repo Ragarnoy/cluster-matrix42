@@ -8,6 +8,7 @@ defmt = { workspace = true, optional = true }
 
 [features]
 default = []
+std = []
 defmt = ["dep:defmt"]
 
 [build-dependencies]

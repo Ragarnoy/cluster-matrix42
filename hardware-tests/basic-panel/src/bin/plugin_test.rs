@@ -125,7 +125,7 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
     // Look for the quadrant plugin
     let plugin_to_load = plugin_list
         .iter()
-        .find(|(name, _)| *name == "plasma")
+        .find(|(name, _)| *name == "bouncing_ball")
         .or_else(|| plugin_list.first()) // Fallback to first plugin if quadrant not found
         .unwrap();
 
@@ -149,11 +149,7 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
     let mut last_time = embassy_time::Instant::now();
 
     info!("Starting plugin animation loop");
-    info!(
-        "Display dimensions: {}x{}",
-        hub75_rp2350_driver::DISPLAY_WIDTH,
-        hub75_rp2350_driver::DISPLAY_HEIGHT
-    );
+    info!("Display dimensions: {}x{}", DISPLAY_WIDTH, DISPLAY_HEIGHT);
     info!("Plugin framebuffer: 128x128");
 
     // Main animation loop - run the plugin!

@@ -42,30 +42,30 @@
 typedef struct FrameBuffer {
   // Raw pixel data in RGB565 format
   uint16_t pixels[FRAMEBUFFER_SIZE];
-  // Display width (always 128)
+  // Display width
   uint32_t width;
-  // Display height (always 128)
+  // Display height
   uint32_t height;
   // Current frame counter
   uint32_t frame_counter;
 } FrameBuffer;
 
-// Graphics helper functions
+// Graphics helper functions (C function pointers)
 typedef struct GraphicsContext {
-  void (*set_pixel)(int32_t x, int32_t y, uint16_t color);
-  uint16_t (*get_pixel)(int32_t x, int32_t y);
-  void (*clear)(uint16_t color);
-  void (*fill_rect)(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t color);
-  void (*draw_line)(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t color);
-  void (*draw_circle)(int32_t cx, int32_t cy, int32_t radius, uint16_t color);
-  void (*blit)(int32_t x, int32_t y, int32_t w, int32_t h, const uint16_t *data);
+  void (*set_pixel_fn)(int32_t x, int32_t y, uint16_t color);
+  uint16_t (*get_pixel_fn)(int32_t x, int32_t y);
+  void (*clear_fn)(uint16_t color);
+  void (*fill_rect_fn)(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t color);
+  void (*draw_line_fn)(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t color);
+  void (*draw_circle_fn)(int32_t cx, int32_t cy, int32_t radius, uint16_t color);
+  void (*blit_fn)(int32_t x, int32_t y, int32_t w, int32_t h, const uint16_t *data);
 } GraphicsContext;
 
-// System utilities
+// System utilities (C function pointers and color constants)
 typedef struct SystemContext {
-  uint32_t (*random)(void);
-  uint32_t (*millis)(void);
-  uint16_t (*rgb)(uint8_t r, uint8_t g, uint8_t b);
+  uint32_t (*random_fn)(void);
+  uint32_t (*millis_fn)(void);
+  uint16_t (*rgb_fn)(uint8_t r, uint8_t g, uint8_t b);
   uint16_t color_red;
   uint16_t color_green;
   uint16_t color_blue;
@@ -76,7 +76,11 @@ typedef struct SystemContext {
   uint16_t color_magenta;
 } SystemContext;
 
-// Main API structure passed to plugins
+// Main API structure passed to plugins.
+//
+// This struct contains raw pointers to the runtime-provided contexts.
+// The pointers are guaranteed valid for the duration of `init`, `update`,
+// and `cleanup` calls when used through the plugin system.
 typedef struct PluginAPI {
   // Direct framebuffer access
   struct FrameBuffer *framebuffer;
@@ -86,7 +90,7 @@ typedef struct PluginAPI {
   const struct SystemContext *sys;
 } PluginAPI;
 
-// Plugin header
+// Plugin header placed at start of binary
 typedef struct PluginHeader {
   uint32_t magic;
   uint32_t api_version;

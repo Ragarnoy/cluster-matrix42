@@ -3,6 +3,12 @@ use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 
+pub mod native_plugin;
+pub mod plugin_host;
+
+pub use native_plugin::NativePlugin;
+pub use plugin_host::{Plugin, SimulatorPluginRuntime};
+
 pub type AnimationFn =
     fn(&mut SimulatorDisplay<Rgb565>, u32) -> Result<(), core::convert::Infallible>;
 

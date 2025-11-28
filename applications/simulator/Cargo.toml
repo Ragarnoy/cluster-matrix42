@@ -5,10 +5,13 @@ edition = "2024"
 
 [dependencies]
 # Use the embedded-graphics simulator
-embedded-graphics-simulator = "0.7.0"
+embedded-graphics-simulator = "0.8.0"
 embedded-graphics = { workspace = true }
 
 # Shared animation logic
 cluster-core = { workspace = true, features = ["std"] }
 graphics-common = { workspace = true }
-cluster-macros = { workspace = true }
+
+# Plugin system
+plugin-api = { path = "../../plugins/plugin-api", features = ["std"] }
+libloading = "0.9.0"
