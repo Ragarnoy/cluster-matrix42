@@ -160,7 +160,7 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         let fps = if micros > 0 { 1_000_000 / micros } else { 0 };
         last_time = current_time;
 
-        if frame_counter % 60 == 0 {
+        if frame_counter.is_multiple_of(60) {
             info!("Plugin FPS: {}", fps);
         }
 
@@ -180,7 +180,7 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         display.commit();
         let commit_time = commit_start.elapsed();
 
-        if frame_counter % 60 == 0 {
+        if frame_counter.is_multiple_of(60) {
             info!(
                 "Timing - Update: {}us, Copy: {}us, Commit: {}us",
                 update_time.as_micros(),

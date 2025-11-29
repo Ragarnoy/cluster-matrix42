@@ -4,7 +4,7 @@
 //! to native shared libraries (.so on Linux, .dylib on macOS, .dll on Windows)
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const C_PLUGINS: &[&str] = &["plasma", "quadrant"];
@@ -106,8 +106,8 @@ fn main() {
 }
 
 fn compile_c_plugin(
-    src_dir: &PathBuf,
-    out_dir: &PathBuf,
+    src_dir: &Path,
+    out_dir: &Path,
     name: &str,
     cc: &str,
     lib_prefix: &str,
@@ -150,8 +150,8 @@ fn compile_c_plugin(
 }
 
 fn compile_rust_plugin(
-    rust_plugin_dir: &PathBuf,
-    out_dir: &PathBuf,
+    rust_plugin_dir: &Path,
+    out_dir: &Path,
     name: &str,
     lib_prefix: &str,
     lib_ext: &str,
@@ -206,7 +206,7 @@ fn compile_rust_plugin(
 }
 
 fn generate_plugin_list(
-    out_dir: &PathBuf,
+    out_dir: &Path,
     c_plugins: &[(&str, String)],
     rust_plugins: &[(&str, String)],
 ) {

@@ -150,9 +150,15 @@ impl PluginRuntime {
                 magic: header.magic,
                 api_version: header.api_version,
                 name: header.name,
-                init: core::mem::transmute(base_addr + init_offset),
-                update: core::mem::transmute(base_addr + update_offset),
-                cleanup: core::mem::transmute(base_addr + cleanup_offset),
+                init: core::mem::transmute::<usize, unsafe extern "C" fn(*const PluginAPI) -> i32>(
+                    base_addr + init_offset,
+                ),
+                update: core::mem::transmute::<usize, unsafe extern "C" fn(*const PluginAPI, u32)>(
+                    base_addr + update_offset,
+                ),
+                cleanup: core::mem::transmute::<usize, unsafe extern "C" fn()>(
+                    base_addr + cleanup_offset,
+                ),
             };
 
             core::ptr::write(

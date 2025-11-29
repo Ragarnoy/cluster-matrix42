@@ -114,14 +114,12 @@ fn discover_c_plugins(c_plugin_dir: &Path) -> Vec<String> {
     if let Ok(entries) = std::fs::read_dir(c_plugin_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() {
-                if let Some(ext) = path.extension() {
-                    if ext == "c" {
-                        if let Some(stem) = path.file_stem() {
-                            plugins.push(stem.to_string_lossy().to_string());
-                        }
-                    }
-                }
+            if path.is_file()
+                && let Some(ext) = path.extension()
+                && ext == "c"
+                && let Some(stem) = path.file_stem()
+            {
+                plugins.push(stem.to_string_lossy().to_string());
             }
         }
     }
@@ -137,13 +135,11 @@ fn discover_rust_plugins(rust_plugin_dir: &Path) -> Vec<String> {
     if let Ok(entries) = std::fs::read_dir(rust_plugin_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_dir() {
-                // Check if it has a Cargo.toml
-                if path.join("Cargo.toml").exists() {
-                    if let Some(name) = path.file_name() {
-                        plugins.push(name.to_string_lossy().to_string());
-                    }
-                }
+            if path.is_dir()
+                && path.join("Cargo.toml").exists()
+                && let Some(name) = path.file_name()
+            {
+                plugins.push(name.to_string_lossy().to_string());
             }
         }
     }

@@ -329,6 +329,12 @@ pub struct PluginInstance<T>(UnsafeCell<Option<T>>);
 // SAFETY: Plugins are single-threaded on embedded targets
 unsafe impl<T> Sync for PluginInstance<T> {}
 
+impl<T> Default for PluginInstance<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> PluginInstance<T> {
     pub const fn new() -> Self {
         Self(UnsafeCell::new(None))
@@ -341,7 +347,9 @@ impl<T> PluginInstance<T> {
     }
 
     /// # Safety
-    /// Must only be called from single-threaded plugin context
+    /// Must only be called from single-threaded plugin context.
+    /// This uses UnsafeCell for interior mutability - returning &mut from &self is intentional.
+    #[allow(clippy::mut_from_ref)]
     pub unsafe fn get_mut(&self) -> Option<&mut T> {
         unsafe { (*self.0.get()).as_mut() }
     }
