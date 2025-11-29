@@ -32,8 +32,12 @@ jobs:
         run: |
           cargo check -p graphics-common
           cargo check -p cluster-core
+          cargo check -p cluster-net --all-features
+          cargo check -p plugin-api --features std
           cargo check -p simulator
           cargo check -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --features "gbr_128x128"
+          cargo check -p plugin-api --target thumbv8m.main-none-eabihf
+          cargo check -p plugin-host --target thumbv8m.main-none-eabihf
           cargo check -p basic-panel --target thumbv8m.main-none-eabihf --features "128"
 #          cargo check -p cluster-matrix-app
       - name: Clippy - Desktop/Simulator packages
@@ -42,32 +46,35 @@ jobs:
           cargo clippy -p graphics-common --all-features -- -D warnings
           cargo clippy -p cluster-core --no-default-features -- -D warnings
           cargo clippy -p cluster-core -- -D warnings
+          cargo clippy -p cluster-net --all-features -- -D warnings
+          cargo clippy -p plugin-api --features std -- -D warnings
 #          cargo clippy -p cluster-matrix-app --all-features -- -D warnings
       - name: Clippy - Embedded packages
-        run: >
-          cargo clippy -p hub75-rp2350-driver --features "gbr_128x128" --target
-          thumbv8m.main-none-eabihf -- -D warnings
-
-          cargo clippy -p basic-panel --features "128"
-          --target thumbv8m.main-none-eabihf -- -D warnings
+        run: |
+          cargo clippy -p hub75-rp2350-driver --features "gbr_128x128" --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p plugin-api --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p plugin-host --target thumbv8m.main-none-eabihf -- -D warnings
+          cargo clippy -p basic-panel --features "128" --target thumbv8m.main-none-eabihf -- -D warnings
       - name: Build - Desktop/Simulator packages
         run: |
           cargo build -p graphics-common --release
           cargo build -p cluster-core --release
+          cargo build -p cluster-net --all-features --release
+          cargo build -p plugin-api --features std --release
           cargo build -p simulator --release
 #          cargo build -p cluster-matrix-app --release
       - name: Build - Embedded packages
-        run: >
-          cargo build -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf
-          --release --features "gbr_128x128"
-
-          cargo build -p basic-panel --target thumbv8m.main-none-eabihf
-          --release --features "128"
+        run: |
+          cargo build -p hub75-rp2350-driver --target thumbv8m.main-none-eabihf --release --features "gbr_128x128"
+          cargo build -p plugin-api --target thumbv8m.main-none-eabihf --release
+          cargo build -p plugin-host --target thumbv8m.main-none-eabihf --release
+          cargo build -p basic-panel --target thumbv8m.main-none-eabihf --release --features "128"
       - name: Run tests
         run: |
           cargo test -p simulator
           cargo test -p graphics-common --features std
           cargo test -p cluster-core --features std
+          cargo test -p cluster-net --all-features
 #          cargo test -p cluster-matrix-app --features std
       - name: Check binary size
         if: github.event_name == 'pull_request'
