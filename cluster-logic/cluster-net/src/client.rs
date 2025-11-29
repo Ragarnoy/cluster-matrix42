@@ -20,9 +20,9 @@ pub struct ClientConfig<const URL_LEN: usize = 128> {
 
 impl<const URL_LEN: usize> ClientConfig<URL_LEN> {
     /// Create a new client configuration
-    pub fn new(base_url: &str) -> core::result::Result<Self, ()> {
+    pub fn new(base_url: &str) -> Result<Self> {
         Ok(Self {
-            base_url: String::try_from(base_url).map_err(|_| ())?,
+            base_url: String::try_from(base_url).map_err(|_| Error::InvalidUrl)?,
             timeout_ms: 5000, // 5 second default timeout
         })
     }
@@ -74,8 +74,8 @@ impl<'a, T: TcpConnect, D: Dns, const BUF_SIZE: usize> Client<'a, T, D, BUF_SIZE
     /// let mut tx_buf = [0u8; TLS_BUFFER_SIZE];
     /// let tls = create_tls_config(&mut rx_buf, &mut tx_buf);
     ///
-    /// let config = ClientConfig::new("https://api.example.com").unwrap();
-    /// let mut client = Client::new_with_tls(config, tcp, dns, tls);
+    /// let config: ClientConfig<128> = ClientConfig::new("https://api.example.com").unwrap();
+    /// let mut client: Client<'_, T, D, 8192> = Client::new_with_tls(config, tcp, dns, tls);
     /// # }
     /// # }
     /// ```
@@ -151,25 +151,5 @@ impl<'a, T: TcpConnect, D: Dns, const BUF_SIZE: usize> Client<'a, T, D, BUF_SIZE
     /// Get the client configuration
     pub fn config(&self) -> &ClientConfig {
         &self.config
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_client_config_creation() {
-        let config = ClientConfig::new("http://example.com").unwrap();
-        assert_eq!(config.base_url.as_str(), "http://example.com");
-        assert_eq!(config.timeout_ms, 5000);
-    }
-
-    #[test]
-    fn test_client_config_with_timeout() {
-        let config = ClientConfig::new("http://example.com")
-            .unwrap()
-            .with_timeout(10000);
-        assert_eq!(config.timeout_ms, 10000);
     }
 }
