@@ -197,12 +197,18 @@ fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), St
     }
 
     // Link
-    let ld_script = src_dir.join("common/plugin.ld");
-    if !ld_script.exists() {
-        println!("cargo:warning=Creating default linker script");
-        std::fs::create_dir_all(src_dir.join("common")).ok();
-        std::fs::write(&ld_script, DEFAULT_LINKER_SCRIPT).map_err(|e| e.to_string())?;
-    }
+    // Try to use linker script from source, fall back to generated one in out_dir
+    let src_ld_script = src_dir.join("common/plugin.ld");
+    let ld_script = if src_ld_script.exists() {
+        src_ld_script
+    } else {
+        let out_ld_script = out_dir.join("plugin.ld");
+        if !out_ld_script.exists() {
+            println!("cargo:warning=Generating default linker script");
+            std::fs::write(&out_ld_script, DEFAULT_LINKER_SCRIPT).map_err(|e| e.to_string())?;
+        }
+        out_ld_script
+    };
 
     let output = Command::new("arm-none-eabi-ld")
         .args([

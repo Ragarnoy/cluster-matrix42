@@ -192,7 +192,7 @@ impl PluginRuntime {
                 while len < 32 && final_header.name[len] != 0 {
                     len += 1;
                 }
-                core::str::from_utf8_unchecked(&final_header.name[..len])
+                core::str::from_utf8(&final_header.name[..len]).unwrap_or("invalid string")
             };
 
             self.current_plugin = Some(LoadedPlugin {
