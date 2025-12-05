@@ -26,7 +26,7 @@ pub enum SymbolConvention {
 /// A plugin loaded from a shared library
 pub struct NativePlugin {
     _lib: Library,
-    name: String,
+    name: &'static str,
     init_fn: Symbol<'static, unsafe extern "C" fn(*const PluginAPI) -> i32>,
     update_fn: Symbol<'static, unsafe extern "C" fn(*const PluginAPI, u32)>,
     cleanup_fn: Symbol<'static, unsafe extern "C" fn()>,
@@ -34,7 +34,11 @@ pub struct NativePlugin {
 
 impl NativePlugin {
     /// Load a plugin from a shared library with the specified symbol convention
-    pub fn load(path: &Path, name: &str, convention: SymbolConvention) -> Result<Self, String> {
+    pub fn load(
+        path: &Path,
+        name: &'static str,
+        convention: SymbolConvention,
+    ) -> Result<Self, String> {
         unsafe {
             let lib = Library::new(path).map_err(|e| format!("Failed to load library: {}", e))?;
 
@@ -75,7 +79,7 @@ impl NativePlugin {
 
             Ok(Self {
                 _lib: lib,
-                name: name.to_string(),
+                name,
                 init_fn,
                 update_fn,
                 cleanup_fn,
@@ -84,7 +88,7 @@ impl NativePlugin {
     }
 
     /// Load a C plugin by name
-    pub fn load_c_plugin(name: &str) -> Result<Self, String> {
+    pub fn load_c_plugin(name: &'static str) -> Result<Self, String> {
         for (plugin_name, path) in NATIVE_C_PLUGINS {
             if *plugin_name == name {
                 return Self::load(Path::new(path), name, SymbolConvention::NamePrefixed);
@@ -94,7 +98,7 @@ impl NativePlugin {
     }
 
     /// Load a Rust plugin by name
-    pub fn load_rust_plugin(name: &str) -> Result<Self, String> {
+    pub fn load_rust_plugin(name: &'static str) -> Result<Self, String> {
         for (plugin_name, path) in NATIVE_RUST_PLUGINS {
             if *plugin_name == name {
                 return Self::load(Path::new(path), name, SymbolConvention::Generic);
@@ -147,6 +151,6 @@ impl Plugin for NativePlugin {
     }
 
     fn name(&self) -> &'static str {
-        Box::leak(self.name.clone().into_boxed_str())
+        self.name
     }
 }

@@ -3,7 +3,6 @@
 #![no_std]
 #![no_main]
 
-use cluster_core::parsing::Layout;
 use defmt::info;
 use embassy_executor::{Executor, Spawner};
 use embassy_rp::multicore::Stack;
