@@ -219,6 +219,22 @@ impl<'d> Hub75<'d> {
         self.memory.clear();
     }
 
+    /// Get mutable access to the internal draw buffer
+    ///
+    /// This provides direct access to the framebuffer for advanced use cases
+    /// like bulk pixel operations. The buffer uses BCM (Binary Code Modulation)
+    /// format - see DisplayMemory::set_pixel for encoding details.
+    ///
+    /// # Returns
+    /// Mutable reference to the draw buffer array
+    ///
+    /// # Safety
+    /// You must write data in the correct BCM format. Incorrect data will
+    /// cause visual artifacts or incorrect colors.
+    pub fn get_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
+        self.memory.get_draw_buffer_mut()
+    }
+
     /// Set overall brightness (0-255)
     ///
     /// This affects all subsequently drawn pixels.

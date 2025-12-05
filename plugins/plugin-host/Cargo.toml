@@ -1,0 +1,17 @@
+[package]
+name = "plugin-host"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+plugin-api = { workspace = true }  # This ensures plugin-api builds first
+embedded-graphics-core = { workspace = true }
+static_cell = { workspace = true }
+defmt = { workspace = true, optional = true }
+
+[build-dependencies]
+# Build dependencies for compiling C code
+
+[features]
+default = []
+defmt = ["dep:defmt", "plugin-api/defmt"]  # Pass through defmt feature

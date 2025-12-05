@@ -1,0 +1,15 @@
+[package]
+name = "plugin-api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+defmt = { workspace = true, optional = true }
+
+[features]
+default = []
+std = []
+defmt = ["dep:defmt"]
+
+[build-dependencies]
+cbindgen = "0.29"

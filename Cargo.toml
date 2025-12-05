@@ -9,6 +9,8 @@ members = [
     # "drivers/hub75-driver",  #disabled
     "hardware-tests/basic-panel",
     "hardware-tests/eth-test",
+    "plugins/plugin-api",
+    "plugins/plugin-host",
 ]
 
 [profile.release]
@@ -26,6 +28,7 @@ graphics-common = { path = "graphics-common" }
 cluster-core = { path = "cluster-logic/cluster-core" }
 cluster-macros = { path = "cluster-logic/cluster-macros" }
 cluster-net = { path = "cluster-logic/cluster-net" }
+plugin-api = { path = "plugins/plugin-api" }
 #hub75-driver = { path = "hub75-driver" } not using it anymore
 hub75-rp2350-driver = { path = "drivers/hub75-rp2350-driver" }
 

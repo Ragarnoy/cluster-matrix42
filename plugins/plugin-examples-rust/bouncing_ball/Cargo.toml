@@ -1,0 +1,20 @@
+[package]
+name = "bouncing_ball"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "bouncing_ball"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "bouncing_ball"
+path = "src/main.rs"
+
+[dependencies]
+plugin-api = { path = "../../plugin-api" }
+
+[features]
+default = []
+simulator = ["plugin-api/std"]

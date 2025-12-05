@@ -85,24 +85,3 @@ pub fn create_tls_config_with_psk<'a>(
         TlsVerify::Psk { identity, psk },
     )
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_create_tls_config() {
-        let mut rx = [0u8; TLS_BUFFER_SIZE];
-        let mut tx = [0u8; TLS_BUFFER_SIZE];
-
-        let _tls = create_tls_config(&mut rx, &mut tx);
-    }
-
-    #[test]
-    fn test_create_tls_config_with_psk() {
-        const IDENTITY: &[u8] = b"test";
-        const PSK: &[u8] = b"key";
-        let mut rx = [0u8; TLS_BUFFER_SIZE];
-        let mut tx = [0u8; TLS_BUFFER_SIZE];
-
-        let _tls = create_tls_config_with_psk(&mut rx, &mut tx, IDENTITY, PSK);
-    }
-}

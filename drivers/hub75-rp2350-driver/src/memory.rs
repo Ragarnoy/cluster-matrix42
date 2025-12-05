@@ -109,6 +109,17 @@ impl DisplayMemory {
         }
     }
 
+    /// Get mutable access to the draw buffer for direct writes
+    ///
+    /// This provides low-level access to the internal framebuffer.
+    /// Use with caution - you must write in the correct BCM format.
+    ///
+    /// # Returns
+    /// Mutable reference to the draw buffer array
+    pub fn get_draw_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
+        self.get_draw_buffer()
+    }
+
     /// Set a pixel in the draw buffer
     ///
     /// # Arguments
@@ -151,9 +162,9 @@ impl DisplayMemory {
 
         for b in 0..COLOR_BITS {
             // Extract the n-th bit of each component of the color and pack them
-            let cr = c_r >> b & 0b1;
-            let cg = c_g >> b & 0b1;
-            let cb = c_b >> b & 0b1;
+            let cr = (c_r >> b) & 0b1;
+            let cg = (c_g >> b) & 0b1;
+            let cb = (c_b >> b) & 0b1;
             let packed_rgb = (cb << 2 | cg << 1 | cr) as u8;
             let idx = base_idx + b * DISPLAY_WIDTH;
 
