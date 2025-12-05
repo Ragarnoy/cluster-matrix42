@@ -222,16 +222,20 @@ fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), St
     }
 
     // Convert to binary
-    Command::new("arm-none-eabi-objcopy")
+    let output = Command::new("arm-none-eabi-objcopy")
         .args([
             "-O",
             "binary",
             elf_file.to_str().unwrap(),
             bin_file.to_str().unwrap(),
         ])
-        .status()
+        .output()
         .map_err(|e| format!("objcopy failed: {}", e))?;
 
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("objcopy failed: {}", stderr));
+    }
     if let Ok(metadata) = std::fs::metadata(&bin_file) {
         println!(
             "cargo:warning=Plugin {} size: {} bytes",
