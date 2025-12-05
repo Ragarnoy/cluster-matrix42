@@ -3,9 +3,9 @@
 #![no_std]
 #![no_main]
 
+use cluster_core::models::Layout;
 use defmt::info;
-use embassy_executor::{Executor, Spawner};
-use embassy_rp::multicore::Stack;
+use embassy_executor::Spawner;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -149,10 +149,14 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         // Measure animation frame drawing time
         let anim_start = embassy_time::Instant::now();
 
-        match state.read() {
+        match &*state.read().await {
             State::Init => animations::fortytwo::draw_animation_frame(&mut display, frame_counter),
             State::Running(layout) => {
                 cluster_core::visualization::draw_cluster_frame(&mut display, layout, frame_counter)
+            }
+            State::Error(_) => {
+                // Draw error state animation
+                animations::fortytwo::draw_animation_frame(&mut display, frame_counter)
             }
         }
         .unwrap();
