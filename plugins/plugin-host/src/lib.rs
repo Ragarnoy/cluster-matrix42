@@ -100,12 +100,11 @@ impl PluginRuntime {
 
             core::ptr::copy_nonoverlapping(plugin_bytes.as_ptr(), buffer_ptr, plugin_bytes.len());
 
-            // Zero .bss section (not included in binary)
+            // Zero remaining buffer space for .bss section (uninitialized data)
+            // This ensures all static/global variables are properly zeroed regardless of actual BSS size
             let bss_start = plugin_bytes.len();
-            let bss_size = 256;
-            if bss_start + bss_size <= BUFFER_SIZE {
-                core::ptr::write_bytes(buffer_ptr.add(bss_start), 0, bss_size);
-            }
+            let remaining_size = BUFFER_SIZE - bss_start;
+            core::ptr::write_bytes(buffer_ptr.add(bss_start), 0, remaining_size);
 
             let header = &*(addr_of!(PLUGIN_LOAD_BUFFER.0).cast::<PluginHeader>());
 
