@@ -21,22 +21,10 @@ use {defmt_rtt as _, panic_probe as _};
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
 
-    let pins = Hub75Pins {
-        r1_pin: p.PIN_0,
-        g1_pin: p.PIN_1,
-        b1_pin: p.PIN_2,
-        r2_pin: p.PIN_3,
-        g2_pin: p.PIN_4,
-        b2_pin: p.PIN_5,
-        a_pin: p.PIN_6,
-        b_pin: p.PIN_7,
-        c_pin: p.PIN_8,
-        d_pin: p.PIN_9,
-        e_pin: p.PIN_10,
-        clk_pin: p.PIN_12,
-        lat_pin: p.PIN_11,
-        oe_pin: p.PIN_13,
-    };
+    let pins = Hub75Pins::for_board(
+        p.PIN_0, p.PIN_1, p.PIN_2, p.PIN_3, p.PIN_4, p.PIN_5, p.PIN_6, p.PIN_7, p.PIN_8, p.PIN_9,
+        p.PIN_10, p.PIN_11, p.PIN_12, p.PIN_13,
+    );
 
     let dma_channels = DmaChannels {
         dma_ch0: p.DMA_CH0,

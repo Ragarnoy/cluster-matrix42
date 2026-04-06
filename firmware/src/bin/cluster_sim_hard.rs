@@ -56,35 +56,16 @@ async fn main(spawner: Spawner) {
         },
     );
 
-    // Group pins and DMA channels
-    // Devkit PCB pin mapping (via SN74LVC16T245 level shifter):
-    //   Stock RP2350 mapping for reference:
-    //     r1=0, g1=1, b1=2, r2=3, g2=4, b2=5,
-    //     a=6, b=7, c=8, d=9, e=10, clk=11, lat=12, oe=13
-    //   Devkit PCB discrepancies (from schematic):
-    //     - G1/B1 swapped (GPIO1→B1, GPIO2→G1) — compensated in framebuffer packing
-    //     - G2/B2 swapped (GPIO4→B2, GPIO5→G2) — compensated in framebuffer packing
-    //     - Addr rotated: GPIO6→E, GPIO7→A, GPIO8→B, GPIO9→C, GPIO10→D — compensated in framebuffer row remap
-    //     - CLK/LAT swapped: GPIO11→LAT, GPIO12→CLK — fixed here (side-set pins)
-    // NOTE: PIO `out pins` and `mov pins` always map to consecutive GPIOs from
-    // the base pin, so data and address pin swaps CANNOT be fixed at pin assignment
-    // level. Only side-set (single-pin) swaps work here.
-    let pins = Hub75Pins {
-        r1_pin: p.PIN_0,
-        g1_pin: p.PIN_1,
-        b1_pin: p.PIN_2,
-        r2_pin: p.PIN_3,
-        g2_pin: p.PIN_4,
-        b2_pin: p.PIN_5,
-        a_pin: p.PIN_6,
-        b_pin: p.PIN_7,
-        c_pin: p.PIN_8,
-        d_pin: p.PIN_9,
-        e_pin: p.PIN_10,
-        clk_pin: p.PIN_12, // PCB swaps CLK/LAT — fixed here
-        lat_pin: p.PIN_11, // PCB swaps CLK/LAT — fixed here
-        oe_pin: p.PIN_13,
-    };
+    // Pins for Hub75. Hub75Pins::for_board picks the correct CLK/LAT mapping
+    // for the active board (stock Pico 2 vs devkit) at compile time.
+    // Data and address pin swaps on the devkit PCB cannot be fixed at the pin
+    // assignment level (PIO out/mov pins are always consecutive from the base
+    // GPIO), so they are compensated in the framebuffer packing under the
+    // devkit_remap feature.
+    let pins = Hub75Pins::for_board(
+        p.PIN_0, p.PIN_1, p.PIN_2, p.PIN_3, p.PIN_4, p.PIN_5, p.PIN_6, p.PIN_7, p.PIN_8, p.PIN_9,
+        p.PIN_10, p.PIN_11, p.PIN_12, p.PIN_13,
+    );
 
     let dma_channels = DmaChannels {
         dma_ch0: p.DMA_CH0,

@@ -41,10 +41,66 @@ pub struct Hub75Pins {
     pub c_pin: Peri<'static, PIN_8>,
     pub d_pin: Peri<'static, PIN_9>,
     pub e_pin: Peri<'static, PIN_10>,
-    // Control pins (devkit PCB swaps CLK/LAT through level shifter)
+    // Control pins. Devkit PCB swaps CLK/LAT through the level shifter,
+    // so the underlying pin types differ between configurations. Stock
+    // Pico 2 wiring uses PIN_11=CLK / PIN_12=LAT; devkit uses the opposite.
+    #[cfg(not(feature = "devkit_remap"))]
+    pub clk_pin: Peri<'static, PIN_11>,
+    #[cfg(not(feature = "devkit_remap"))]
+    pub lat_pin: Peri<'static, PIN_12>,
+    #[cfg(feature = "devkit_remap")]
     pub clk_pin: Peri<'static, PIN_12>,
+    #[cfg(feature = "devkit_remap")]
     pub lat_pin: Peri<'static, PIN_11>,
     pub oe_pin: Peri<'static, PIN_13>,
+}
+
+impl Hub75Pins {
+    /// Build a `Hub75Pins` from raw peripherals, applying the board-specific
+    /// CLK/LAT routing automatically based on the active features.
+    ///
+    /// Stock Pico 2 (default): PIN_11 → CLK, PIN_12 → LAT.
+    /// Devkit (`devkit_remap`): PIN_11 → LAT, PIN_12 → CLK.
+    #[allow(clippy::too_many_arguments)]
+    pub fn for_board(
+        pin_0: Peri<'static, PIN_0>,
+        pin_1: Peri<'static, PIN_1>,
+        pin_2: Peri<'static, PIN_2>,
+        pin_3: Peri<'static, PIN_3>,
+        pin_4: Peri<'static, PIN_4>,
+        pin_5: Peri<'static, PIN_5>,
+        pin_6: Peri<'static, PIN_6>,
+        pin_7: Peri<'static, PIN_7>,
+        pin_8: Peri<'static, PIN_8>,
+        pin_9: Peri<'static, PIN_9>,
+        pin_10: Peri<'static, PIN_10>,
+        pin_11: Peri<'static, PIN_11>,
+        pin_12: Peri<'static, PIN_12>,
+        pin_13: Peri<'static, PIN_13>,
+    ) -> Self {
+        Self {
+            r1_pin: pin_0,
+            g1_pin: pin_1,
+            b1_pin: pin_2,
+            r2_pin: pin_3,
+            g2_pin: pin_4,
+            b2_pin: pin_5,
+            a_pin: pin_6,
+            b_pin: pin_7,
+            c_pin: pin_8,
+            d_pin: pin_9,
+            e_pin: pin_10,
+            #[cfg(not(feature = "devkit_remap"))]
+            clk_pin: pin_11,
+            #[cfg(not(feature = "devkit_remap"))]
+            lat_pin: pin_12,
+            #[cfg(feature = "devkit_remap")]
+            clk_pin: pin_12,
+            #[cfg(feature = "devkit_remap")]
+            lat_pin: pin_11,
+            oe_pin: pin_13,
+        }
+    }
 }
 
 pub struct DmaChannels {

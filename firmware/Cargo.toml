@@ -55,4 +55,6 @@ bench = false
 waveshare = ["hub75-driver/waveshare_64x32"]
 128 = ["hub75-driver/gbr_128x128"]
 64 = ["hub75-driver/gbr_64x64"]
-devkit = ["128", "hub75-driver/devkit_remap"]
+# Local mirror so cfg(feature = "devkit_remap") works inside this crate.
+devkit_remap = ["hub75-driver/devkit_remap"]
+devkit = ["128", "devkit_remap"]
