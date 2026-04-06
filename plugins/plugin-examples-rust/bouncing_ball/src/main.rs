@@ -13,7 +13,7 @@ pub use bouncing_ball::*;
 
 #[cfg(not(feature = "simulator"))]
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
+const fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 

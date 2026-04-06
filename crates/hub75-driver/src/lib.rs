@@ -231,7 +231,7 @@ impl<'d> Hub75<'d> {
     /// # Safety
     /// You must write data in the correct BCM format. Incorrect data will
     /// cause visual artifacts or incorrect colors.
-    pub fn get_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
+    pub const fn get_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
         self.memory.get_draw_buffer_mut()
     }
 

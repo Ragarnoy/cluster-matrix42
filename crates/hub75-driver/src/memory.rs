@@ -76,7 +76,7 @@ impl DisplayMemory {
     }
 
     /// Initialize pointers after creation
-    pub fn init_pointers(&mut self) {
+    pub const fn init_pointers(&mut self) {
         self.fb_ptr = self.fb0.as_mut_ptr();
         self.delay_ptr = self.delays.as_mut_ptr();
     }
@@ -101,7 +101,7 @@ impl DisplayMemory {
     }
 
     /// Get the currently inactive buffer for drawing
-    fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
+    const fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
         if self.current_buffer {
             &mut self.fb0
         } else {
@@ -116,7 +116,7 @@ impl DisplayMemory {
     ///
     /// # Returns
     /// Mutable reference to the draw buffer array
-    pub fn get_draw_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
+    pub const fn get_draw_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
         self.get_draw_buffer()
     }
 

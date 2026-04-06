@@ -329,7 +329,7 @@ fn generate_empty_plugin_list(out_dir: &Path) {
         #[cfg(target_arch = "arm")]
         pub mod plugins {}
 
-        pub fn get_plugin_list() -> &'static [(&'static str, &'static [u8])] {
+        pub const fn get_plugin_list() -> &'static [(&'static str, &'static [u8])] {
             &[]
         }
     "#;
@@ -348,7 +348,7 @@ fn generate_plugin_includes(out_dir: &Path, plugins: &[String]) {
     }
     code.push_str("}\n\n");
     code.push_str(
-        "pub fn get_plugin_list() -> &'static [(&'static str, &'static [u8])] {\n    &[\n",
+        "pub const fn get_plugin_list() -> &'static [(&'static str, &'static [u8])] {\n    &[\n",
     );
     for plugin in plugins {
         code.push_str(&format!(

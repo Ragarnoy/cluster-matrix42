@@ -212,7 +212,7 @@ impl PluginRuntime {
         }
     }
 
-    pub fn framebuffer(&self) -> &FrameBuffer {
+    pub const fn framebuffer(&self) -> &FrameBuffer {
         &self.framebuffer
     }
 
@@ -226,7 +226,7 @@ impl PluginRuntime {
 }
 
 // Graphics functions with bounds checking
-fn set_pixel(runtime: &mut PluginRuntime, x: i32, y: i32, color: u16) {
+const fn set_pixel(runtime: &mut PluginRuntime, x: i32, y: i32, color: u16) {
     if x >= 0 && x < DISPLAY_WIDTH as i32 && y >= 0 && y < DISPLAY_HEIGHT as i32 {
         let idx = (y as usize) * DISPLAY_WIDTH + (x as usize);
         runtime.framebuffer.pixels[idx] = color;
@@ -236,7 +236,7 @@ fn set_pixel(runtime: &mut PluginRuntime, x: i32, y: i32, color: u16) {
     }
 }
 
-fn get_pixel(runtime: &PluginRuntime, x: i32, y: i32) -> u16 {
+const fn get_pixel(runtime: &PluginRuntime, x: i32, y: i32) -> u16 {
     if x >= 0 && x < DISPLAY_WIDTH as i32 && y >= 0 && y < DISPLAY_HEIGHT as i32 {
         let idx = (y as usize) * DISPLAY_WIDTH + (x as usize);
         runtime.framebuffer.pixels[idx]
@@ -268,7 +268,7 @@ fn fill_rect(runtime: &mut PluginRuntime, x: i32, y: i32, w: i32, h: i32, color:
     }
 }
 
-fn draw_line(runtime: &mut PluginRuntime, x0: i32, y0: i32, x1: i32, y1: i32, color: u16) {
+const fn draw_line(runtime: &mut PluginRuntime, x0: i32, y0: i32, x1: i32, y1: i32, color: u16) {
     let mut x = x0;
     let mut y = y0;
 
@@ -430,6 +430,6 @@ unsafe extern "C" fn sys_millis() -> u32 {
     }
 }
 
-unsafe extern "C" fn sys_rgb(r: u8, g: u8, b: u8) -> u16 {
+const unsafe extern "C" fn sys_rgb(r: u8, g: u8, b: u8) -> u16 {
     ((r as u16 & 0xF8) << 8) | ((g as u16 & 0xFC) << 3) | ((b as u16 & 0xF8) >> 3)
 }
