@@ -183,9 +183,17 @@ impl DisplayMemory {
         c_b = GAMMA8[c_b as usize] as u16;
 
         // Devkit PCB swaps G/B through the level shifter channels:
-        // GPIO1→B1, GPIO2→G1 (and GPIO4→B2, GPIO5→G2)
-        // Swap c_r and c_g so bit0 carries red and bit1 carries blue
-        #[cfg(feature = "devkit_remap")]
+        // GPIO1→B1, GPIO2→G1 (and GPIO4→B2, GPIO5→G2), so the packed byte
+        // needs to carry (cb=green, cg=blue, cr=red) regardless of which
+        // color order feature the driver was built with. The required swap
+        // depends on what {c_r, c_g, c_b} currently hold:
+        //   color_rgb → c_r=red,  c_g=green, c_b=blue  → swap(c_g, c_b)
+        //   color_gbr → c_r=blue, c_g=red,   c_b=green → swap(c_r, c_g)
+        #[cfg(all(feature = "devkit_remap", feature = "color_rgb"))]
+        {
+            core::mem::swap(&mut c_g, &mut c_b);
+        }
+        #[cfg(all(feature = "devkit_remap", feature = "color_gbr"))]
         {
             core::mem::swap(&mut c_r, &mut c_g);
         }
