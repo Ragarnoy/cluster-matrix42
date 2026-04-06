@@ -73,12 +73,12 @@ impl PluginRuntime {
             current_plugin: None,
         });
 
-        runtime.api.framebuffer = &mut runtime.framebuffer as *mut _;
-        runtime.api.gfx = &runtime.graphics_ctx as *const _;
-        runtime.api.sys = &runtime.system_ctx as *const _;
+        runtime.api.framebuffer = &raw mut runtime.framebuffer;
+        runtime.api.gfx = &raw const runtime.graphics_ctx;
+        runtime.api.sys = &raw const runtime.system_ctx;
 
         unsafe {
-            RUNTIME_PTR = Some(runtime as *mut _);
+            RUNTIME_PTR = Some(&raw mut *runtime);
         }
 
         runtime
@@ -177,7 +177,7 @@ impl PluginRuntime {
             #[cfg(feature = "defmt")]
             defmt::debug!("Calling plugin init at {:#x}", final_header.init as usize);
 
-            let result = (final_header.init)(&self.api as *const _);
+            let result = (final_header.init)(&raw const self.api);
 
             #[cfg(feature = "defmt")]
             defmt::debug!("Plugin init returned: {}", result);
@@ -206,7 +206,7 @@ impl PluginRuntime {
     pub fn update(&mut self, inputs: u32) {
         if let Some(plugin) = &self.current_plugin {
             unsafe {
-                (plugin.header.update)(&self.api as *const _, inputs);
+                (plugin.header.update)(&raw const self.api, inputs);
             }
             self.framebuffer.frame_counter = self.framebuffer.frame_counter.wrapping_add(1);
         }
@@ -415,9 +415,9 @@ unsafe extern "C" fn gfx_blit(x: i32, y: i32, w: i32, h: i32, data: *const u16) 
 
 // System utilities
 unsafe extern "C" fn sys_random() -> u32 {
-    static mut SEED: u32 = 0xDEADBEEF;
+    static mut SEED: u32 = 0xDEAD_BEEF;
     unsafe {
-        SEED = SEED.wrapping_mul(1103515245).wrapping_add(12345);
+        SEED = SEED.wrapping_mul(1_103_515_245).wrapping_add(12345);
         SEED
     }
 }

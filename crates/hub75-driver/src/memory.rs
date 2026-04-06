@@ -47,12 +47,12 @@ impl DisplayMemory {
 
             // Initialize framebuffers to zero
             core::ptr::write_bytes(
-                core::ptr::addr_of_mut!((*ptr).fb0) as *mut u8,
+                core::ptr::addr_of_mut!((*ptr).fb0).cast::<u8>(),
                 0,
                 FRAME_SIZE,
             );
             core::ptr::write_bytes(
-                core::ptr::addr_of_mut!((*ptr).fb1) as *mut u8,
+                core::ptr::addr_of_mut!((*ptr).fb1).cast::<u8>(),
                 0,
                 FRAME_SIZE,
             );
@@ -219,12 +219,12 @@ impl DisplayMemory {
 
     /// Get pointer to the framebuffer pointer (for DMA chaining)
     pub const fn get_fb_ptr_addr(&self) -> *const *mut u8 {
-        &self.fb_ptr as *const _
+        &raw const self.fb_ptr
     }
 
     /// Get pointer to the delay pointer (for DMA chaining)
     pub const fn get_delay_ptr_addr(&self) -> *const *mut u32 {
-        &self.delay_ptr as *const _
+        &raw const self.delay_ptr
     }
 }
 

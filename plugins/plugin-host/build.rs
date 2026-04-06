@@ -32,7 +32,7 @@ fn main() {
     for plugin in &c_plugins {
         println!(
             "cargo:rerun-if-changed={}",
-            c_plugin_dir.join(format!("{}.c", plugin)).display()
+            c_plugin_dir.join(format!("{plugin}.c")).display()
         );
     }
 
@@ -70,10 +70,10 @@ fn main() {
             match compile_c_plugin(&c_plugin_dir, &out_dir, plugin) {
                 Ok(()) => {
                     successful_plugins.push(plugin.clone());
-                    println!("cargo:warning=Successfully compiled C plugin: {}", plugin);
+                    println!("cargo:warning=Successfully compiled C plugin: {plugin}");
                 }
                 Err(e) => {
-                    println!("cargo:warning=Failed to compile C plugin {}: {}", plugin, e);
+                    println!("cargo:warning=Failed to compile C plugin {plugin}: {e}");
                 }
             }
         }
@@ -86,16 +86,10 @@ fn main() {
         match compile_rust_plugin(&rust_plugin_dir, &out_dir, plugin) {
             Ok(()) => {
                 successful_plugins.push(plugin.clone());
-                println!(
-                    "cargo:warning=Successfully compiled Rust plugin: {}",
-                    plugin
-                );
+                println!("cargo:warning=Successfully compiled Rust plugin: {plugin}");
             }
             Err(e) => {
-                println!(
-                    "cargo:warning=Failed to compile Rust plugin {}: {}",
-                    plugin, e
-                );
+                println!("cargo:warning=Failed to compile Rust plugin {plugin}: {e}");
             }
         }
     }
@@ -149,15 +143,15 @@ fn discover_rust_plugins(rust_plugin_dir: &Path) -> Vec<String> {
 }
 
 fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), String> {
-    let src_file = src_dir.join(format!("{}.c", name));
+    let src_file = src_dir.join(format!("{name}.c"));
 
     if !src_file.exists() {
         return Err("Source file does not exist".to_string());
     }
 
-    let obj_file = out_dir.join(format!("{}.o", name));
-    let elf_file = out_dir.join(format!("{}.elf", name));
-    let bin_file = out_dir.join(format!("{}.bin", name));
+    let obj_file = out_dir.join(format!("{name}.o"));
+    let elf_file = out_dir.join(format!("{name}.elf"));
+    let bin_file = out_dir.join(format!("{name}.bin"));
 
     let include_path = src_dir.join("common");
 
@@ -178,13 +172,13 @@ fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), St
             obj_file.to_str().unwrap(),
         ])
         .output()
-        .map_err(|e| format!("Failed to run gcc: {}", e))?;
+        .map_err(|e| format!("Failed to run gcc: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("cargo:warning=GCC compilation failed for {}:", name);
+        println!("cargo:warning=GCC compilation failed for {name}:");
         for line in stderr.lines() {
-            println!("cargo:warning=  {}", line);
+            println!("cargo:warning=  {line}");
         }
         return Err(format!(
             "Compilation failed with exit code: {:?}",
@@ -219,11 +213,11 @@ fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), St
             elf_file.to_str().unwrap(),
         ])
         .output()
-        .map_err(|e| format!("Failed to run ld: {}", e))?;
+        .map_err(|e| format!("Failed to run ld: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("cargo:warning=Linker error: {}", stderr);
+        println!("cargo:warning=Linker error: {stderr}");
         return Err("Linking failed".to_string());
     }
 
@@ -236,16 +230,15 @@ fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), St
             bin_file.to_str().unwrap(),
         ])
         .output()
-        .map_err(|e| format!("objcopy failed: {}", e))?;
+        .map_err(|e| format!("objcopy failed: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("objcopy failed: {}", stderr));
+        return Err(format!("objcopy failed: {stderr}"));
     }
     if let Ok(metadata) = std::fs::metadata(&bin_file) {
         println!(
-            "cargo:warning=Plugin {} size: {} bytes",
-            name,
+            "cargo:warning=Plugin {name} size: {} bytes",
             metadata.len()
         );
     }
@@ -275,13 +268,13 @@ fn compile_rust_plugin(rust_plugin_dir: &Path, out_dir: &Path, name: &str) -> Re
             plugin_dir.join("Cargo.toml").to_str().unwrap(),
         ])
         .output()
-        .map_err(|e| format!("Failed to run cargo: {}", e))?;
+        .map_err(|e| format!("Failed to run cargo: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("cargo:warning=Cargo build failed for {}:", name);
+        println!("cargo:warning=Cargo build failed for {name}:");
         for line in stderr.lines().take(20) {
-            println!("cargo:warning=  {}", line);
+            println!("cargo:warning=  {line}");
         }
         return Err("Cargo build failed".to_string());
     }
@@ -296,7 +289,7 @@ fn compile_rust_plugin(rust_plugin_dir: &Path, out_dir: &Path, name: &str) -> Re
     }
 
     // Convert ELF to binary
-    let bin_file = out_dir.join(format!("{}.bin", name));
+    let bin_file = out_dir.join(format!("{name}.bin"));
 
     let output = Command::new("arm-none-eabi-objcopy")
         .args([
@@ -306,17 +299,16 @@ fn compile_rust_plugin(rust_plugin_dir: &Path, out_dir: &Path, name: &str) -> Re
             bin_file.to_str().unwrap(),
         ])
         .output()
-        .map_err(|e| format!("objcopy failed: {}", e))?;
+        .map_err(|e| format!("objcopy failed: {e}"))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("objcopy failed: {}", stderr));
+        return Err(format!("objcopy failed: {stderr}"));
     }
 
     if let Ok(metadata) = std::fs::metadata(&bin_file) {
         println!(
-            "cargo:warning=Plugin {} size: {} bytes",
-            name,
+            "cargo:warning=Plugin {name} size: {} bytes",
             metadata.len()
         );
     }
@@ -337,31 +329,30 @@ fn generate_empty_plugin_list(out_dir: &Path) {
 }
 
 fn generate_plugin_includes(out_dir: &Path, plugins: &[String]) {
+    use core::fmt::Write;
+    let out_dir_disp = out_dir.display();
     let mut code = String::from("pub mod plugins {\n");
     for plugin in plugins {
-        code.push_str(&format!(
-            "    pub const {}_BYTES: &[u8] = include_bytes!(\"{}/{}.bin\");\n",
-            plugin.to_uppercase().replace('-', "_"),
-            out_dir.display(),
-            plugin
-        ));
+        let upper = plugin.to_uppercase().replace('-', "_");
+        writeln!(
+            code,
+            "    pub const {upper}_BYTES: &[u8] = include_bytes!(\"{out_dir_disp}/{plugin}.bin\");"
+        )
+        .unwrap();
     }
     code.push_str("}\n\n");
     code.push_str(
         "pub const fn get_plugin_list() -> &'static [(&'static str, &'static [u8])] {\n    &[\n",
     );
     for plugin in plugins {
-        code.push_str(&format!(
-            "        (\"{}\", plugins::{}_BYTES),\n",
-            plugin,
-            plugin.to_uppercase().replace('-', "_")
-        ));
+        let upper = plugin.to_uppercase().replace('-', "_");
+        writeln!(code, "        (\"{plugin}\", plugins::{upper}_BYTES),").unwrap();
     }
     code.push_str("    ]\n}\n");
     std::fs::write(out_dir.join("plugin_includes.rs"), code).unwrap();
 }
 
-const DEFAULT_LINKER_SCRIPT: &str = r#"
+const DEFAULT_LINKER_SCRIPT: &str = r"
 MEMORY {
     PLUGIN : ORIGIN = 0x00000000, LENGTH = 64K
 }
@@ -380,4 +371,4 @@ SECTIONS {
         *(.data*)
     } > PLUGIN
 }
-"#;
+";

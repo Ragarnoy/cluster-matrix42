@@ -64,6 +64,7 @@ async fn main(spawner: Spawner) {
 }
 
 #[embassy_executor::task]
+#[allow(clippy::unused_async)] // embassy tasks must be async
 async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: Hub75Pins) {
     info!("Starting Hub75 LED matrix control with 3 PIO SMs + chained DMA");
 

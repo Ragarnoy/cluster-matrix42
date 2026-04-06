@@ -158,7 +158,7 @@ async fn cluster_matrix_task(
             info!("Cluster visualization FPS: {}", fps);
             if let Ok(cluster_id) = receiver.try_receive() {
                 info!("Selected cluster: {:?}", Debug2Format(&cluster_id));
-                renderer.set_selected_cluster(cluster_id)
+                renderer.set_selected_cluster(cluster_id);
             }
         }
 
@@ -167,7 +167,7 @@ async fn cluster_matrix_task(
 
         if let Ok(layout) = layout.try_read() {
             match renderer.render_frame(&mut display, &layout, frame_counter) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(_) => {
                     info!("Failed to draw cluster frame");
                     display.draw_test_pattern();

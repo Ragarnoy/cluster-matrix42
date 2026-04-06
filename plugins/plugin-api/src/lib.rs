@@ -11,7 +11,7 @@ pub const DISPLAY_HEIGHT: usize = 128;
 pub const FRAMEBUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT;
 
 /// Plugin magic number and version
-pub const PLUGIN_MAGIC: u32 = 0x504C5547; // "PLUG" in hex
+pub const PLUGIN_MAGIC: u32 = 0x504C_5547; // "PLUG" in hex
 pub const PLUGIN_API_VERSION: u32 = 1;
 
 // ============================================================================
