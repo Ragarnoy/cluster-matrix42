@@ -1,14 +1,14 @@
 [workspace]
 resolver = "3"
 members = [
-    "graphics-common",
-    "cluster-logic/*",
-    "applications/cluster-matrix-app",
-    "applications/simulator",
-    "drivers/hub75-rp2350-driver",
-    # "drivers/hub75-driver",  #disabled
-    "hardware-tests/basic-panel",
-    "hardware-tests/eth-test",
+    "crates/graphics-common",
+    "crates/cluster-core",
+    "crates/cluster-macros",
+    "crates/cluster-net",
+    "crates/hub75-driver",
+    "firmware",
+    "eth-test",
+    "simulator",
     "plugins/plugin-api",
     "plugins/plugin-host",
 ]
@@ -24,13 +24,12 @@ lto = true
 
 [workspace.dependencies]
 # Local dependencies
-graphics-common = { path = "graphics-common" }
-cluster-core = { path = "cluster-logic/cluster-core" }
-cluster-macros = { path = "cluster-logic/cluster-macros" }
-cluster-net = { path = "cluster-logic/cluster-net" }
+graphics-common = { path = "crates/graphics-common" }
+cluster-core = { path = "crates/cluster-core" }
+cluster-macros = { path = "crates/cluster-macros" }
+cluster-net = { path = "crates/cluster-net" }
 plugin-api = { path = "plugins/plugin-api" }
-#hub75-driver = { path = "hub75-driver" } not using it anymore
-hub75-rp2350-driver = { path = "drivers/hub75-rp2350-driver" }
+hub75-driver = { path = "crates/hub75-driver" }
 
 # Embedded dependencies
 embedded-graphics-core = "0.4"
