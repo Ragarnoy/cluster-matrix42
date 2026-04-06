@@ -157,12 +157,20 @@ impl DisplayMemory {
         // Devkit PCB has address pins rotated: GPIO6→E, GPIO7→A, GPIO8→B, GPIO9→C, GPIO10→D
         // PIO bit 0 goes to GPIO6 (E) instead of A, so we rotate the row address left by 1
         // to compensate: when PIO outputs rotated value, the panel sees the correct row.
+        // Rotate width is derived from ACTIVE_ROWS so this works for any panel size
+        // (ACTIVE_ROWS must be a power of two, which is always the case for HUB75 panels).
         #[cfg(feature = "devkit_remap")]
         let y = {
-            let half_row = y % (DISPLAY_HEIGHT / 2);
-            let rotated = ((half_row << 1) | (half_row >> 4)) & 0x1F;
-            if y >= DISPLAY_HEIGHT / 2 {
-                rotated + DISPLAY_HEIGHT / 2
+            const ADDR_BITS: u32 = ACTIVE_ROWS.trailing_zeros();
+            const ADDR_MASK: usize = ACTIVE_ROWS - 1;
+            const _: () = assert!(
+                ACTIVE_ROWS.is_power_of_two(),
+                "devkit_remap requires ACTIVE_ROWS to be a power of two"
+            );
+            let half_row = y % ACTIVE_ROWS;
+            let rotated = ((half_row << 1) | (half_row >> (ADDR_BITS - 1))) & ADDR_MASK;
+            if y >= ACTIVE_ROWS {
+                rotated + ACTIVE_ROWS
             } else {
                 rotated
             }
