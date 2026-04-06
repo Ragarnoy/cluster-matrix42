@@ -9,7 +9,7 @@
 //! # Example
 //!
 //! ```no_run
-//! use hub75_rp2350_driver::{Hub75, DisplayMemory};
+//! use hub75_driver::{Hub75, DisplayMemory};
 //! use embassy_rp::peripherals::*;
 //!
 //! // Create static display memory

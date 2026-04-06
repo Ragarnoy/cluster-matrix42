@@ -1,5 +1,5 @@
 [package]
-name = "hub75-rp2350-driver"
+name = "hub75-driver"
 version = "0.1.0"
 edition = "2024"
 
@@ -15,6 +15,7 @@ size_64x64 = []
 size_64x32 = []
 color_rgb = []
 color_gbr = []
+devkit_remap = []
 waveshare_64x32 = ["size_64x32", "color_rgb"]
 gbr_128x128 = ["size_128x128", "color_gbr"]
 gbr_64x64 = ["size_64x64", "color_gbr"]

@@ -154,11 +154,33 @@ impl DisplayMemory {
             c_r = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
         }
 
+        // Devkit PCB has address pins rotated: GPIO6→E, GPIO7→A, GPIO8→B, GPIO9→C, GPIO10→D
+        // PIO bit 0 goes to GPIO6 (E) instead of A, so we rotate the row address left by 1
+        // to compensate: when PIO outputs rotated value, the panel sees the correct row.
+        #[cfg(feature = "devkit_remap")]
+        let y = {
+            let half_row = y % (DISPLAY_HEIGHT / 2);
+            let rotated = ((half_row << 1) | (half_row >> 4)) & 0x1F;
+            if y >= DISPLAY_HEIGHT / 2 {
+                rotated + DISPLAY_HEIGHT / 2
+            } else {
+                rotated
+            }
+        };
+
         let base_idx = x + ((y % (DISPLAY_HEIGHT / 2)) * DISPLAY_WIDTH * COLOR_BITS);
 
         c_r = GAMMA8[c_r as usize] as u16;
         c_g = GAMMA8[c_g as usize] as u16;
         c_b = GAMMA8[c_b as usize] as u16;
+
+        // Devkit PCB swaps G/B through the level shifter channels:
+        // GPIO1→B1, GPIO2→G1 (and GPIO4→B2, GPIO5→G2)
+        // Swap c_r and c_g so bit0 carries red and bit1 carries blue
+        #[cfg(feature = "devkit_remap")]
+        {
+            core::mem::swap(&mut c_r, &mut c_g);
+        }
 
         for b in 0..COLOR_BITS {
             // Extract the n-th bit of each component of the color and pack them
