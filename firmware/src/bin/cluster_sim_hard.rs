@@ -1,10 +1,10 @@
 //! Hardware test for cluster visualization system
-//! Combines basic-panel hardware setup with cluster simulation data
+//! Combines firmware BSP with cluster simulation data
 
 #![no_std]
 #![no_main]
 
-use basic_panel::{
+use firmware::{
     CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins, LAYOUT, LayoutLock,
     SELECTED_CLUSTER, helpers,
 };
@@ -21,7 +21,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::{Channel, Receiver, Sender};
 use embassy_sync::rwlock::RwLock;
 use embassy_time::{Duration, Timer};
-use hub75_rp2350_driver::{DisplayMemory, Hub75};
+use hub75_driver::{DisplayMemory, Hub75};
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
@@ -57,6 +57,18 @@ async fn main(spawner: Spawner) {
     );
 
     // Group pins and DMA channels
+    // Devkit PCB pin mapping (via SN74LVC16T245 level shifter):
+    //   Stock RP2350 mapping for reference:
+    //     r1=0, g1=1, b1=2, r2=3, g2=4, b2=5,
+    //     a=6, b=7, c=8, d=9, e=10, clk=11, lat=12, oe=13
+    //   Devkit PCB discrepancies (from schematic):
+    //     - G1/B1 swapped (GPIO1→B1, GPIO2→G1) — compensated in framebuffer packing
+    //     - G2/B2 swapped (GPIO4→B2, GPIO5→G2) — compensated in framebuffer packing
+    //     - Addr rotated: GPIO6→E, GPIO7→A, GPIO8→B, GPIO9→C, GPIO10→D — compensated in framebuffer row remap
+    //     - CLK/LAT swapped: GPIO11→LAT, GPIO12→CLK — fixed here (side-set pins)
+    // NOTE: PIO `out pins` and `mov pins` always map to consecutive GPIOs from
+    // the base pin, so data and address pin swaps CANNOT be fixed at pin assignment
+    // level. Only side-set (single-pin) swaps work here.
     let pins = Hub75Pins {
         r1_pin: p.PIN_0,
         g1_pin: p.PIN_1,
@@ -69,8 +81,8 @@ async fn main(spawner: Spawner) {
         c_pin: p.PIN_8,
         d_pin: p.PIN_9,
         e_pin: p.PIN_10,
-        clk_pin: p.PIN_11,
-        lat_pin: p.PIN_12,
+        clk_pin: p.PIN_12, // PCB swaps CLK/LAT — fixed here
+        lat_pin: p.PIN_11, // PCB swaps CLK/LAT — fixed here
         oe_pin: p.PIN_13,
     };
 

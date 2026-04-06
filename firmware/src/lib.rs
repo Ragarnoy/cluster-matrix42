@@ -12,7 +12,7 @@ use embassy_rp::peripherals::{
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::rwlock::RwLock;
-use hub75_rp2350_driver::DisplayMemory;
+use hub75_driver::DisplayMemory;
 use static_cell::StaticCell;
 
 pub type LayoutLock = RwLock<CriticalSectionRawMutex, Layout>;
@@ -41,9 +41,9 @@ pub struct Hub75Pins {
     pub c_pin: Peri<'static, PIN_8>,
     pub d_pin: Peri<'static, PIN_9>,
     pub e_pin: Peri<'static, PIN_10>,
-    // Control pins
-    pub clk_pin: Peri<'static, PIN_11>,
-    pub lat_pin: Peri<'static, PIN_12>,
+    // Control pins (devkit PCB swaps CLK/LAT through level shifter)
+    pub clk_pin: Peri<'static, PIN_12>,
+    pub lat_pin: Peri<'static, PIN_11>,
     pub oe_pin: Peri<'static, PIN_13>,
 }
 

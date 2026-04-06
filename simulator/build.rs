@@ -18,12 +18,7 @@ fn main() {
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let plugins_dir = manifest_dir
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("plugins");
+    let plugins_dir = manifest_dir.parent().unwrap().join("plugins");
     let c_plugin_dir = plugins_dir.join("plugin-examples-c");
     let rust_plugin_dir = plugins_dir.join("plugin-examples-rust");
 

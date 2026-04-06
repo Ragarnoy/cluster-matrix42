@@ -10,15 +10,14 @@
 #![no_std]
 #![no_main]
 
-mod compat;
-
-use crate::compat::StackAdapter;
 use cluster_core::types::ClusterId;
 use cluster_net::client::{Client, ClientConfig};
 use cluster_net::endpoints::Endpoints;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
+use embassy_net::dns::DnsSocket;
+use embassy_net::tcp::client::{TcpClient, TcpClientState};
 use embassy_net::{Stack, StackResources};
 use embassy_net_wiznet::chip::W6100;
 use embassy_net_wiznet::{Device, Runner, State};
@@ -26,10 +25,16 @@ use embassy_rp::clocks::RoscRng;
 use embassy_rp::gpio::{Input, Level, Output, Pull};
 use embassy_rp::peripherals::SPI0;
 use embassy_rp::spi::{Async, Config as SpiConfig, Spi};
+use embassy_rp::{bind_interrupts, dma};
 use embassy_time::{Delay, Timer};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
+
+bind_interrupts!(struct Irqs {
+    DMA_IRQ_0 => dma::InterruptHandler<embassy_rp::peripherals::DMA_CH0>,
+                 dma::InterruptHandler<embassy_rp::peripherals::DMA_CH1>;
+});
 
 // Test configuration
 const TEST_SERVER_URL: &str = "http://example.com"; // Replace with your test server
@@ -67,7 +72,7 @@ async fn main(spawner: Spawner) {
 
     // Pin mapping: MISO=16, MOSI=19, SCLK=18, CSn=17, RSTn=20, INTn=21
     let (miso, mosi, clk) = (p.PIN_16, p.PIN_19, p.PIN_18);
-    let spi = Spi::new(p.SPI0, clk, mosi, miso, p.DMA_CH0, p.DMA_CH1, spi_cfg);
+    let spi = Spi::new(p.SPI0, clk, mosi, miso, p.DMA_CH0, p.DMA_CH1, Irqs, spi_cfg);
     let cs = Output::new(p.PIN_17, Level::High);
     let w6100_int = Input::new(p.PIN_21, Pull::Up);
     let w6100_reset = Output::new(p.PIN_20, Level::High);
@@ -114,13 +119,16 @@ async fn main(spawner: Spawner) {
 
     // Run HTTP tests
     info!("Starting HTTP tests...");
-    test_http_client(stack).await;
+    static TCP_STATE: StaticCell<TcpClientState<1, 4096, 4096>> = StaticCell::new();
+    let tcp = TcpClient::new(stack, TCP_STATE.init(TcpClientState::new()));
+    let dns = DnsSocket::new(stack);
+    test_http_client(&tcp, &dns).await;
 
     // Optional: Run HTTPS tests if TLS feature is enabled
     #[cfg(feature = "tls")]
     {
         info!("Starting HTTPS tests...");
-        test_https_client(stack).await;
+        test_https_client(&tcp, &dns).await;
     }
 
     // Continuous polling loop
@@ -131,7 +139,7 @@ async fn main(spawner: Spawner) {
     loop {
         Timer::after_secs(TEST_INTERVAL_SECS).await;
 
-        match poll_cluster_data(stack).await {
+        match poll_cluster_data(&tcp, &dns).await {
             Ok(()) => info!("Poll successful"),
             Err(e) => error!("Poll failed: {:?}", e),
         }
@@ -149,7 +157,10 @@ async fn wait_for_config(stack: Stack<'static>) -> embassy_net::StaticConfigV4 {
 }
 
 /// Test HTTP client functionality
-async fn test_http_client(stack: Stack<'static>) {
+async fn test_http_client<T: embedded_nal_async::TcpConnect, D: embedded_nal_async::Dns>(
+    tcp: &T,
+    dns: &D,
+) {
     info!("=== HTTP Client Test ===");
 
     // Create client configuration
@@ -161,21 +172,17 @@ async fn test_http_client(stack: Stack<'static>) {
         }
     };
 
-    // Create compatibility adapter for embassy-net stack
-    let adapter = StackAdapter::new(&stack);
-
-    // Create HTTP client using the adapter
-    let mut client: Client<StackAdapter, StackAdapter> = Client::new(config, &adapter, &adapter);
+    // Create HTTP client
+    let mut client: Client<'_, _, _, 8192> = Client::new(config, tcp, dns);
 
     // Test 1: Fetch cluster F0
     info!("Test 1: Fetching cluster F0...");
     let mut buffer = [0u8; 8192];
 
-    // Scope the first borrow explicitly
     {
         match Endpoints::get_cluster(&mut client, ClusterId::F0, &mut buffer).await {
             Ok(cluster) => {
-                info!("✓ Successfully fetched cluster F0");
+                info!("Successfully fetched cluster F0");
                 info!("  Name: {}", cluster.name.as_str());
                 info!("  Seats: {}", cluster.seats.len());
                 info!("  Zones: {}", cluster.zones.len());
@@ -188,21 +195,21 @@ async fn test_http_client(stack: Stack<'static>) {
                 );
             }
             Err(e) => {
-                error!("✗ Failed to fetch cluster: {:?}", e);
+                error!("Failed to fetch cluster: {:?}", e);
             }
         }
-    } // First borrow of client ends here
+    }
 
     // Small delay between requests
     Timer::after_millis(500).await;
 
     // Test 2: Fetch complete layout
     info!("Test 2: Fetching complete layout...");
-    let mut large_buffer = [0u8; 16384]; // Larger buffer for layout
+    let mut large_buffer = [0u8; 16384];
 
     match Endpoints::get_layout(&mut client, &mut large_buffer).await {
         Ok(layout) => {
-            info!("✓ Successfully fetched layout");
+            info!("Successfully fetched layout");
             info!("  F0 seats: {}", layout.f0.seats.len());
             info!("  F1 seats: {}", layout.f1.seats.len());
             info!("  F2 seats: {}", layout.f2.seats.len());
@@ -210,7 +217,7 @@ async fn test_http_client(stack: Stack<'static>) {
             info!("  F6 seats: {}", layout.f6.seats.len());
         }
         Err(e) => {
-            error!("✗ Failed to fetch layout: {:?}", e);
+            error!("Failed to fetch layout: {:?}", e);
         }
     }
 
@@ -219,19 +226,18 @@ async fn test_http_client(stack: Stack<'static>) {
 
 /// Test HTTPS client functionality (only with TLS feature)
 #[cfg(feature = "tls")]
-async fn test_https_client(stack: Stack<'static>) {
+async fn test_https_client<T: embedded_nal_async::TcpConnect, D: embedded_nal_async::Dns>(
+    tcp: &T,
+    dns: &D,
+) {
     use cluster_net::tls::{TLS_BUFFER_SIZE, create_tls_config};
 
     info!("=== HTTPS Client Test ===");
 
-    // Allocate TLS buffers
     let mut rx_buffer = [0u8; TLS_BUFFER_SIZE];
     let mut tx_buffer = [0u8; TLS_BUFFER_SIZE];
-
-    // Create TLS config (no verification for testing)
     let tls = create_tls_config(&mut rx_buffer, &mut tx_buffer);
 
-    // Create HTTPS client configuration
     let config = match ClientConfig::new("https://example.com") {
         Ok(cfg) => cfg.with_timeout(10000),
         Err(_) => {
@@ -240,24 +246,19 @@ async fn test_https_client(stack: Stack<'static>) {
         }
     };
 
-    // Create compatibility adapter for embassy-net stack
-    let adapter = compat::StackAdapter::new(&stack);
+    let mut client: Client<'_, _, _, 8192> = Client::new_with_tls(config, tcp, dns, tls);
 
-    // Create HTTPS client
-    let mut client = Client::new_with_tls(config, &adapter, &adapter, tls);
-
-    // Test HTTPS request
     info!("Test: Fetching cluster via HTTPS...");
     let mut buffer = [0u8; 8192];
 
     match Endpoints::get_cluster(&mut client, ClusterId::F0, &mut buffer).await {
         Ok(cluster) => {
-            info!("✓ Successfully fetched cluster via HTTPS");
+            info!("Successfully fetched cluster via HTTPS");
             info!("  Name: {}", cluster.name.as_str());
             info!("  Seats: {}", cluster.seats.len());
         }
         Err(e) => {
-            error!("✗ Failed to fetch via HTTPS: {:?}", e);
+            error!("Failed to fetch via HTTPS: {:?}", e);
         }
     }
 
@@ -265,10 +266,12 @@ async fn test_https_client(stack: Stack<'static>) {
 }
 
 /// Poll cluster data periodically
-async fn poll_cluster_data(stack: Stack<'static>) -> Result<(), ()> {
+async fn poll_cluster_data<T: embedded_nal_async::TcpConnect, D: embedded_nal_async::Dns>(
+    tcp: &T,
+    dns: &D,
+) -> Result<(), ()> {
     let config = ClientConfig::new(TEST_SERVER_URL).map_err(|_| ())?;
-    let adapter = StackAdapter::new(&stack);
-    let mut client: Client<StackAdapter, StackAdapter> = Client::new(config, &adapter, &adapter);
+    let mut client: Client<'_, _, _, 8192> = Client::new(config, tcp, dns);
 
     let mut buffer = [0u8; 8192];
     let cluster = Endpoints::poll_cluster(&mut client, ClusterId::F0, &mut buffer)
