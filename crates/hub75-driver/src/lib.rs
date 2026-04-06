@@ -9,7 +9,7 @@
 //! # Example
 //!
 //! ```no_run
-//! use hub75_rp2350_driver::{Hub75, DisplayMemory};
+//! use hub75_driver::{Hub75, DisplayMemory};
 //! use embassy_rp::peripherals::*;
 //!
 //! // Create static display memory
@@ -231,7 +231,7 @@ impl<'d> Hub75<'d> {
     /// # Safety
     /// You must write data in the correct BCM format. Incorrect data will
     /// cause visual artifacts or incorrect colors.
-    pub fn get_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
+    pub const fn get_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
         self.memory.get_draw_buffer_mut()
     }
 
@@ -340,7 +340,7 @@ impl<'d> Hub75<'d> {
 
         // DMA channel 1 needs to read the current value of fb_ptr to reset channel 0's read address
         // Safety: fb_ptr is part of 'static memory and won't move. The DMA will only read this address.
-        let fb_ptr_addr = &self.memory.fb_ptr as *const _ as u32;
+        let fb_ptr_addr = (&raw const self.memory.fb_ptr) as u32;
         dma.ch(1).read_addr().write_value(fb_ptr_addr);
         dma.ch(1)
             .write_addr()
@@ -381,7 +381,7 @@ impl<'d> Hub75<'d> {
 
         // DMA channel 3 needs to read the current value of delay_ptr to reset channel 2's read address
         // Safety: delay_ptr is part of 'static memory and won't move. The DMA will only read this address.
-        let delay_ptr_addr = &self.memory.delay_ptr as *const _ as u32;
+        let delay_ptr_addr = (&raw const self.memory.delay_ptr) as u32;
         dma.ch(3).read_addr().write_value(delay_ptr_addr);
         dma.ch(3)
             .write_addr()
@@ -398,13 +398,13 @@ impl<'d> Hub75<'d> {
 }
 
 // Implement embedded-graphics traits for easy integration
-impl<'d> OriginDimensions for Hub75<'d> {
+impl OriginDimensions for Hub75<'_> {
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }
 }
 
-impl<'d> DrawTarget for Hub75<'d> {
+impl DrawTarget for Hub75<'_> {
     type Color = Rgb565;
     type Error = Infallible;
 
@@ -428,7 +428,7 @@ impl<'d> DrawTarget for Hub75<'d> {
 
 const fn coord_transfer(point: &mut Point) {
     if point.y < 64 {
-        point.x += 128
+        point.x += 128;
     } else {
         point.y -= 64;
     }

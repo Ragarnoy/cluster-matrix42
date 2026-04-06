@@ -73,12 +73,12 @@ impl PluginRuntime {
             current_plugin: None,
         });
 
-        runtime.api.framebuffer = &mut runtime.framebuffer as *mut _;
-        runtime.api.gfx = &runtime.graphics_ctx as *const _;
-        runtime.api.sys = &runtime.system_ctx as *const _;
+        runtime.api.framebuffer = &raw mut runtime.framebuffer;
+        runtime.api.gfx = &raw const runtime.graphics_ctx;
+        runtime.api.sys = &raw const runtime.system_ctx;
 
         unsafe {
-            RUNTIME_PTR = Some(runtime as *mut _);
+            RUNTIME_PTR = Some(&raw mut *runtime);
         }
 
         runtime
@@ -177,7 +177,7 @@ impl PluginRuntime {
             #[cfg(feature = "defmt")]
             defmt::debug!("Calling plugin init at {:#x}", final_header.init as usize);
 
-            let result = (final_header.init)(&self.api as *const _);
+            let result = (final_header.init)(&raw const self.api);
 
             #[cfg(feature = "defmt")]
             defmt::debug!("Plugin init returned: {}", result);
@@ -206,13 +206,13 @@ impl PluginRuntime {
     pub fn update(&mut self, inputs: u32) {
         if let Some(plugin) = &self.current_plugin {
             unsafe {
-                (plugin.header.update)(&self.api as *const _, inputs);
+                (plugin.header.update)(&raw const self.api, inputs);
             }
             self.framebuffer.frame_counter = self.framebuffer.frame_counter.wrapping_add(1);
         }
     }
 
-    pub fn framebuffer(&self) -> &FrameBuffer {
+    pub const fn framebuffer(&self) -> &FrameBuffer {
         &self.framebuffer
     }
 
@@ -226,7 +226,7 @@ impl PluginRuntime {
 }
 
 // Graphics functions with bounds checking
-fn set_pixel(runtime: &mut PluginRuntime, x: i32, y: i32, color: u16) {
+const fn set_pixel(runtime: &mut PluginRuntime, x: i32, y: i32, color: u16) {
     if x >= 0 && x < DISPLAY_WIDTH as i32 && y >= 0 && y < DISPLAY_HEIGHT as i32 {
         let idx = (y as usize) * DISPLAY_WIDTH + (x as usize);
         runtime.framebuffer.pixels[idx] = color;
@@ -236,7 +236,7 @@ fn set_pixel(runtime: &mut PluginRuntime, x: i32, y: i32, color: u16) {
     }
 }
 
-fn get_pixel(runtime: &PluginRuntime, x: i32, y: i32) -> u16 {
+const fn get_pixel(runtime: &PluginRuntime, x: i32, y: i32) -> u16 {
     if x >= 0 && x < DISPLAY_WIDTH as i32 && y >= 0 && y < DISPLAY_HEIGHT as i32 {
         let idx = (y as usize) * DISPLAY_WIDTH + (x as usize);
         runtime.framebuffer.pixels[idx]
@@ -268,7 +268,7 @@ fn fill_rect(runtime: &mut PluginRuntime, x: i32, y: i32, w: i32, h: i32, color:
     }
 }
 
-fn draw_line(runtime: &mut PluginRuntime, x0: i32, y0: i32, x1: i32, y1: i32, color: u16) {
+const fn draw_line(runtime: &mut PluginRuntime, x0: i32, y0: i32, x1: i32, y1: i32, color: u16) {
     let mut x = x0;
     let mut y = y0;
 
@@ -415,9 +415,9 @@ unsafe extern "C" fn gfx_blit(x: i32, y: i32, w: i32, h: i32, data: *const u16) 
 
 // System utilities
 unsafe extern "C" fn sys_random() -> u32 {
-    static mut SEED: u32 = 0xDEADBEEF;
+    static mut SEED: u32 = 0xDEAD_BEEF;
     unsafe {
-        SEED = SEED.wrapping_mul(1103515245).wrapping_add(12345);
+        SEED = SEED.wrapping_mul(1_103_515_245).wrapping_add(12345);
         SEED
     }
 }
@@ -430,6 +430,6 @@ unsafe extern "C" fn sys_millis() -> u32 {
     }
 }
 
-unsafe extern "C" fn sys_rgb(r: u8, g: u8, b: u8) -> u16 {
+const unsafe extern "C" fn sys_rgb(r: u8, g: u8, b: u8) -> u16 {
     ((r as u16 & 0xF8) << 8) | ((g as u16 & 0xFC) << 3) | ((b as u16 & 0xF8) >> 3)
 }

@@ -11,12 +11,11 @@ tls = ["reqwless/embedded-tls", "dep:embedded-tls", "dep:rand"]
 
 [dependencies]
 # HTTP client
-reqwless = { version = "0.13", default-features = false }
-# Note: Using 0.8 to match reqwless, Stack doesn't implement this version's traits
-embedded-nal-async = "0.8"
+reqwless = { version = "0.14", default-features = false }
+embedded-nal-async = "0.9"
 
 # TLS support (optional)
-embedded-tls = { version = "0.17", default-features = false, optional = true }
+embedded-tls = { version = "0.18", default-features = false, optional = true }
 rand = { version = "0.9.2", default-features = false, optional = true }
 
 # Serialization

@@ -3,7 +3,6 @@
 #![no_std]
 #![no_main]
 
-use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use core::ptr::addr_of_mut;
 use defmt::{info, unwrap};
 use embassy_executor::{Executor, Spawner};
@@ -11,8 +10,9 @@ use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
+use firmware::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use graphics_common::animations;
-use hub75_rp2350_driver::{DisplayMemory, Hub75};
+use hub75_driver::{DisplayMemory, Hub75};
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
@@ -47,8 +47,8 @@ async fn main(spawner: Spawner) {
         d_pin: p.PIN_9,  // Changed from PIN_12
         e_pin: p.PIN_10, // Changed from PIN_13
 
-        clk_pin: p.PIN_11, // Changed from PIN_6
-        lat_pin: p.PIN_12, // Changed from PIN_7
+        clk_pin: p.PIN_12, // Devkit PCB swaps CLK/LAT
+        lat_pin: p.PIN_11, // Devkit PCB swaps CLK/LAT
         oe_pin: p.PIN_13,  // Changed from PIN_8
     };
 
@@ -64,6 +64,7 @@ async fn main(spawner: Spawner) {
 }
 
 #[embassy_executor::task]
+#[allow(clippy::unused_async)] // embassy tasks must be async
 async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: Hub75Pins) {
     info!("Starting Hub75 LED matrix control with 3 PIO SMs + chained DMA");
 

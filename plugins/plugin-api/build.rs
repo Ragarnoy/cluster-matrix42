@@ -23,7 +23,7 @@ fn main() {
             bindings.write_to_file(out_path.join("plugin_api.h"));
         }
         Err(e) => {
-            panic!("Failed to generate C bindings: {:?}", e);
+            panic!("Failed to generate C bindings: {e:?}");
         }
     }
 

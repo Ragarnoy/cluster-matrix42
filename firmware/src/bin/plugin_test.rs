@@ -4,7 +4,6 @@
 #![no_std]
 #![no_main]
 
-use basic_panel::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use core::ptr::addr_of_mut;
 use defmt::{info, unwrap, warn};
 use embassy_executor::{Executor, Spawner};
@@ -12,9 +11,8 @@ use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
-use hub75_rp2350_driver::{
-    COLOR_BITS, DISPLAY_HEIGHT, DISPLAY_WIDTH, DisplayMemory, Hub75, lut::GAMMA8,
-};
+use firmware::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
+use hub75_driver::{COLOR_BITS, DISPLAY_HEIGHT, DISPLAY_WIDTH, DisplayMemory, Hub75, lut::GAMMA8};
 use plugin_host::PluginRuntime;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -52,8 +50,8 @@ async fn main(spawner: Spawner) {
         d_pin: p.PIN_9,
         e_pin: p.PIN_10,
 
-        clk_pin: p.PIN_11,
-        lat_pin: p.PIN_12,
+        clk_pin: p.PIN_12, // Devkit PCB swaps CLK/LAT
+        lat_pin: p.PIN_11, // Devkit PCB swaps CLK/LAT
         oe_pin: p.PIN_13,
     };
 

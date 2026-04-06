@@ -11,7 +11,7 @@ pub const DISPLAY_HEIGHT: usize = 128;
 pub const FRAMEBUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT;
 
 /// Plugin magic number and version
-pub const PLUGIN_MAGIC: u32 = 0x504C5547; // "PLUG" in hex
+pub const PLUGIN_MAGIC: u32 = 0x504C_5547; // "PLUG" in hex
 pub const PLUGIN_API_VERSION: u32 = 1;
 
 // ============================================================================
@@ -176,14 +176,14 @@ impl PluginAPI {
 
     /// Get reference to graphics context.
     #[must_use]
-    pub fn gfx(&self) -> &GraphicsContext {
+    pub const fn gfx(&self) -> &GraphicsContext {
         // SAFETY: Plugin runtime guarantees pointer validity during callbacks
         unsafe { &*self.gfx }
     }
 
     /// Get reference to system context.
     #[must_use]
-    pub fn sys(&self) -> &SystemContext {
+    pub const fn sys(&self) -> &SystemContext {
         // SAFETY: Plugin runtime guarantees pointer validity during callbacks
         unsafe { &*self.sys }
     }
@@ -288,7 +288,7 @@ impl FrameBuffer {
     }
 
     /// Set pixel with bounds checking (silent no-op if out of bounds)
-    pub fn set_pixel(&mut self, x: usize, y: usize, color: u16) {
+    pub const fn set_pixel(&mut self, x: usize, y: usize, color: u16) {
         if x < DISPLAY_WIDTH && y < DISPLAY_HEIGHT {
             self.pixels[y * DISPLAY_WIDTH + x] = color;
         }
@@ -296,7 +296,7 @@ impl FrameBuffer {
 
     /// Get pixel with bounds checking
     #[must_use]
-    pub fn get_pixel(&self, x: usize, y: usize) -> Option<u16> {
+    pub const fn get_pixel(&self, x: usize, y: usize) -> Option<u16> {
         if x < DISPLAY_WIDTH && y < DISPLAY_HEIGHT {
             Some(self.pixels[y * DISPLAY_WIDTH + x])
         } else {
@@ -306,13 +306,13 @@ impl FrameBuffer {
 
     /// Direct pixel slice access
     #[must_use]
-    pub fn pixels(&self) -> &[u16; FRAMEBUFFER_SIZE] {
+    pub const fn pixels(&self) -> &[u16; FRAMEBUFFER_SIZE] {
         &self.pixels
     }
 
     /// Direct mutable pixel slice access
     #[must_use]
-    pub fn pixels_mut(&mut self) -> &mut [u16; FRAMEBUFFER_SIZE] {
+    pub const fn pixels_mut(&mut self) -> &mut [u16; FRAMEBUFFER_SIZE] {
         &mut self.pixels
     }
 }

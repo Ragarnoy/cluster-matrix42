@@ -1,14 +1,14 @@
 [package]
-name = "basic-panel"
+name = "firmware"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-hub75-rp2350-driver = { workspace = true }
+hub75-driver = { workspace = true }
 graphics-common = { workspace = true }
 cluster-core = { workspace = true }
-plugin-host = { path = "../../plugins/plugin-host", features = ["defmt"] }
-plugin-api = { path = "../../plugins/plugin-api" }
+plugin-host = { path = "../plugins/plugin-host", features = ["defmt"] }
+plugin-api = { path = "../plugins/plugin-api" }
 embedded-graphics-core = { workspace = true }
 
 # Logging dependencies
@@ -18,7 +18,7 @@ panic-probe = { workspace = true, features = ["print-defmt"] }
 
 # Embassy dependencies
 cortex-m-rt = { workspace = true }
-embassy-executor = { workspace = true, features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-executor = { workspace = true, features = ["platform-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
 embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
 embassy-sync = { workspace = true }
@@ -36,7 +36,13 @@ test = false
 bench = false
 
 [[bin]]
-name = "cluster_sim_hard"
+name = "cluster_sim"
+path = "src/bin/cluster_sim_hard.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "cluster_matrix"
 test = false
 bench = false
 
@@ -46,6 +52,7 @@ test = false
 bench = false
 
 [features]
-waveshare = ["hub75-rp2350-driver/waveshare_64x32"]
-128 = ["hub75-rp2350-driver/gbr_128x128"]
-64 = ["hub75-rp2350-driver/gbr_64x64"]
+waveshare = ["hub75-driver/waveshare_64x32"]
+128 = ["hub75-driver/gbr_128x128"]
+64 = ["hub75-driver/gbr_64x64"]
+devkit = ["128", "hub75-driver/devkit_remap"]

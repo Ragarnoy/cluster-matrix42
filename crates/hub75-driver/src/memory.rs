@@ -47,12 +47,12 @@ impl DisplayMemory {
 
             // Initialize framebuffers to zero
             core::ptr::write_bytes(
-                core::ptr::addr_of_mut!((*ptr).fb0) as *mut u8,
+                core::ptr::addr_of_mut!((*ptr).fb0).cast::<u8>(),
                 0,
                 FRAME_SIZE,
             );
             core::ptr::write_bytes(
-                core::ptr::addr_of_mut!((*ptr).fb1) as *mut u8,
+                core::ptr::addr_of_mut!((*ptr).fb1).cast::<u8>(),
                 0,
                 FRAME_SIZE,
             );
@@ -76,7 +76,7 @@ impl DisplayMemory {
     }
 
     /// Initialize pointers after creation
-    pub fn init_pointers(&mut self) {
+    pub const fn init_pointers(&mut self) {
         self.fb_ptr = self.fb0.as_mut_ptr();
         self.delay_ptr = self.delays.as_mut_ptr();
     }
@@ -101,7 +101,7 @@ impl DisplayMemory {
     }
 
     /// Get the currently inactive buffer for drawing
-    fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
+    const fn get_draw_buffer(&mut self) -> &mut [u8; FRAME_SIZE] {
         if self.current_buffer {
             &mut self.fb0
         } else {
@@ -116,7 +116,7 @@ impl DisplayMemory {
     ///
     /// # Returns
     /// Mutable reference to the draw buffer array
-    pub fn get_draw_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
+    pub const fn get_draw_buffer_mut(&mut self) -> &mut [u8; FRAME_SIZE] {
         self.get_draw_buffer()
     }
 
@@ -154,11 +154,49 @@ impl DisplayMemory {
             c_r = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
         }
 
+        // Devkit PCB has address pins rotated: GPIO6→E, GPIO7→A, GPIO8→B, GPIO9→C, GPIO10→D
+        // PIO bit 0 goes to GPIO6 (E) instead of A, so we rotate the row address left by 1
+        // to compensate: when PIO outputs rotated value, the panel sees the correct row.
+        // Rotate width is derived from ACTIVE_ROWS so this works for any panel size
+        // (ACTIVE_ROWS must be a power of two, which is always the case for HUB75 panels).
+        #[cfg(feature = "devkit_remap")]
+        let y = {
+            const ADDR_BITS: u32 = ACTIVE_ROWS.trailing_zeros();
+            const ADDR_MASK: usize = ACTIVE_ROWS - 1;
+            const _: () = assert!(
+                ACTIVE_ROWS.is_power_of_two(),
+                "devkit_remap requires ACTIVE_ROWS to be a power of two"
+            );
+            let half_row = y % ACTIVE_ROWS;
+            let rotated = ((half_row << 1) | (half_row >> (ADDR_BITS - 1))) & ADDR_MASK;
+            if y >= ACTIVE_ROWS {
+                rotated + ACTIVE_ROWS
+            } else {
+                rotated
+            }
+        };
+
         let base_idx = x + ((y % (DISPLAY_HEIGHT / 2)) * DISPLAY_WIDTH * COLOR_BITS);
 
         c_r = GAMMA8[c_r as usize] as u16;
         c_g = GAMMA8[c_g as usize] as u16;
         c_b = GAMMA8[c_b as usize] as u16;
+
+        // Devkit PCB swaps G/B through the level shifter channels:
+        // GPIO1→B1, GPIO2→G1 (and GPIO4→B2, GPIO5→G2), so the packed byte
+        // needs to carry (cb=green, cg=blue, cr=red) regardless of which
+        // color order feature the driver was built with. The required swap
+        // depends on what {c_r, c_g, c_b} currently hold:
+        //   color_rgb → c_r=red,  c_g=green, c_b=blue  → swap(c_g, c_b)
+        //   color_gbr → c_r=blue, c_g=red,   c_b=green → swap(c_r, c_g)
+        #[cfg(all(feature = "devkit_remap", feature = "color_rgb"))]
+        {
+            core::mem::swap(&mut c_g, &mut c_b);
+        }
+        #[cfg(all(feature = "devkit_remap", feature = "color_gbr"))]
+        {
+            core::mem::swap(&mut c_r, &mut c_g);
+        }
 
         for b in 0..COLOR_BITS {
             // Extract the n-th bit of each component of the color and pack them
@@ -197,12 +235,12 @@ impl DisplayMemory {
 
     /// Get pointer to the framebuffer pointer (for DMA chaining)
     pub const fn get_fb_ptr_addr(&self) -> *const *mut u8 {
-        &self.fb_ptr as *const _
+        &raw const self.fb_ptr
     }
 
     /// Get pointer to the delay pointer (for DMA chaining)
     pub const fn get_delay_ptr_addr(&self) -> *const *mut u32 {
-        &self.delay_ptr as *const _
+        &raw const self.delay_ptr
     }
 }
 
