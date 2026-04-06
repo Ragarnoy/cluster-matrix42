@@ -4,10 +4,6 @@
 #![no_std]
 #![no_main]
 
-use firmware::{
-    CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins, LAYOUT, LayoutLock,
-    SELECTED_CLUSTER, helpers,
-};
 use cluster_core::types::ClusterId;
 use cluster_core::visualization::ClusterRenderer;
 use core::ptr::addr_of_mut;
@@ -21,6 +17,10 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::{Channel, Receiver, Sender};
 use embassy_sync::rwlock::RwLock;
 use embassy_time::{Duration, Timer};
+use firmware::{
+    CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins, LAYOUT, LayoutLock,
+    SELECTED_CLUSTER, helpers,
+};
 use hub75_driver::{DisplayMemory, Hub75};
 use {defmt_rtt as _, panic_probe as _};
 

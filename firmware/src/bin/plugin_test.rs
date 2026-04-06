@@ -4,7 +4,6 @@
 #![no_std]
 #![no_main]
 
-use firmware::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use core::ptr::addr_of_mut;
 use defmt::{info, unwrap, warn};
 use embassy_executor::{Executor, Spawner};
@@ -12,9 +11,8 @@ use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
-use hub75_driver::{
-    COLOR_BITS, DISPLAY_HEIGHT, DISPLAY_WIDTH, DisplayMemory, Hub75, lut::GAMMA8,
-};
+use firmware::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
+use hub75_driver::{COLOR_BITS, DISPLAY_HEIGHT, DISPLAY_WIDTH, DisplayMemory, Hub75, lut::GAMMA8};
 use plugin_host::PluginRuntime;
 use {defmt_rtt as _, panic_probe as _};
 

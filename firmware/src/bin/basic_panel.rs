@@ -3,7 +3,6 @@
 #![no_std]
 #![no_main]
 
-use firmware::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use core::ptr::addr_of_mut;
 use defmt::{info, unwrap};
 use embassy_executor::{Executor, Spawner};
@@ -11,6 +10,7 @@ use embassy_rp::multicore::spawn_core1;
 use embassy_rp::peripherals::*;
 use embassy_rp::{Peri, gpio};
 use embassy_time::{Duration, Timer};
+use firmware::{CORE1_STACK, DISPLAY_MEMORY, DmaChannels, EXECUTOR1, Hub75Pins};
 use graphics_common::animations;
 use hub75_driver::{DisplayMemory, Hub75};
 use {defmt_rtt as _, panic_probe as _};
