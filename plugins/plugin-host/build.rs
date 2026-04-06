@@ -237,10 +237,7 @@ fn compile_c_plugin(src_dir: &Path, out_dir: &Path, name: &str) -> Result<(), St
         return Err(format!("objcopy failed: {stderr}"));
     }
     if let Ok(metadata) = std::fs::metadata(&bin_file) {
-        println!(
-            "cargo:warning=Plugin {name} size: {} bytes",
-            metadata.len()
-        );
+        println!("cargo:warning=Plugin {name} size: {} bytes", metadata.len());
     }
 
     Ok(())
@@ -307,10 +304,7 @@ fn compile_rust_plugin(rust_plugin_dir: &Path, out_dir: &Path, name: &str) -> Re
     }
 
     if let Ok(metadata) = std::fs::metadata(&bin_file) {
-        println!(
-            "cargo:warning=Plugin {name} size: {} bytes",
-            metadata.len()
-        );
+        println!("cargo:warning=Plugin {name} size: {} bytes", metadata.len());
     }
 
     Ok(())
