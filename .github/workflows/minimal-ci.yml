@@ -26,52 +26,69 @@ jobs:
           components: rustfmt, clippy
           targets: thumbv8m.main-none-eabihf
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-hack
       - name: Check formatting
         run: cargo fmt --all -- --check
-      - name: Check core packages
+      # Host-side library crates: check each feature independently.
+      # --exclude-features tls: embedded-tls 0.18 has an upstream bug
+      # (SequenceOf/SetOf used without enabling der's heapless feature)
+      - name: Check host crates (each feature)
         run: |
-          cargo check -p graphics-common
-          cargo check -p cluster-core
-          cargo check -p cluster-net --all-features
-          cargo check -p plugin-api --features std
-          cargo check -p simulator
-          cargo check -p hub75-driver --target thumbv8m.main-none-eabihf --features "gbr_128x128"
-          cargo check -p plugin-api --target thumbv8m.main-none-eabihf
-          cargo check -p plugin-host --target thumbv8m.main-none-eabihf
-          cargo check -p firmware --target thumbv8m.main-none-eabihf --features "128"
-      - name: Clippy - Desktop/Simulator packages
+          cargo hack check --each-feature --no-dev-deps \
+            -p graphics-common -p cluster-core -p cluster-net \
+            -p plugin-api \
+            --exclude-features tls
+          cargo hack check -p simulator
+      # Embedded crates: check against the thumbv8m target.
+      - name: Check embedded crates
         run: |
+          cargo hack check --target thumbv8m.main-none-eabihf \
+            -p hub75-driver --features gbr_128x128
+          cargo hack check --target thumbv8m.main-none-eabihf \
+            -p plugin-api -p plugin-host
+          cargo hack check --target thumbv8m.main-none-eabihf \
+            -p firmware --features "128"
+      - name: Clippy - host crates
+        run: |
+          cargo hack clippy --each-feature --no-dev-deps \
+            -p graphics-common -p cluster-core -p cluster-net \
+            -p plugin-api \
+            --exclude-features tls \
+            -- -D warnings
           cargo clippy -p simulator -- -D warnings
-          cargo clippy -p graphics-common --all-features -- -D warnings
-          cargo clippy -p cluster-core --no-default-features -- -D warnings
-          cargo clippy -p cluster-core -- -D warnings
-          cargo clippy -p cluster-net --all-features -- -D warnings
-          cargo clippy -p plugin-api --features std -- -D warnings
-      - name: Clippy - Embedded packages
+      - name: Clippy - embedded crates
         run: |
-          cargo clippy -p hub75-driver --features "gbr_128x128" --target thumbv8m.main-none-eabihf -- -D warnings
-          cargo clippy -p plugin-api --target thumbv8m.main-none-eabihf -- -D warnings
-          cargo clippy -p plugin-host --target thumbv8m.main-none-eabihf -- -D warnings
-          cargo clippy -p firmware --features "128" --target thumbv8m.main-none-eabihf -- -D warnings
-      - name: Build - Desktop/Simulator packages
+          cargo clippy --target thumbv8m.main-none-eabihf \
+            -p hub75-driver --features "gbr_128x128" -- -D warnings
+          cargo clippy --target thumbv8m.main-none-eabihf \
+            -p plugin-api -- -D warnings
+          cargo clippy --target thumbv8m.main-none-eabihf \
+            -p plugin-host -- -D warnings
+          cargo clippy --target thumbv8m.main-none-eabihf \
+            -p firmware --features "128" -- -D warnings
+      - name: Build - host crates
         run: |
           cargo build -p graphics-common --release
           cargo build -p cluster-core --release
-          cargo build -p cluster-net --all-features --release
+          cargo build -p cluster-net --release
           cargo build -p plugin-api --features std --release
           cargo build -p simulator --release
-      - name: Build - Embedded packages
+      - name: Build - embedded crates
         run: |
-          cargo build -p hub75-driver --target thumbv8m.main-none-eabihf --release --features "gbr_128x128"
-          cargo build -p plugin-api --target thumbv8m.main-none-eabihf --release
-          cargo build -p plugin-host --target thumbv8m.main-none-eabihf --release
-          cargo build -p firmware --target thumbv8m.main-none-eabihf --release --features "128"
+          cargo build --target thumbv8m.main-none-eabihf --release \
+            -p hub75-driver --features "gbr_128x128"
+          cargo build --target thumbv8m.main-none-eabihf --release \
+            -p plugin-api
+          cargo build --target thumbv8m.main-none-eabihf --release \
+            -p plugin-host
+          cargo build --target thumbv8m.main-none-eabihf --release \
+            -p firmware --features "128"
       - name: Run tests
         run: |
           cargo test -p simulator
           cargo test -p graphics-common --features std
           cargo test -p cluster-core --features std
-          cargo test -p cluster-net --all-features
+          cargo test -p cluster-net
       - name: Check binary size
         if: github.event_name == 'pull_request'
         run: >
