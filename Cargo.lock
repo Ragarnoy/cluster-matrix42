@@ -1207,19 +1207,26 @@ name = "firmware"
 version = "0.1.0"
 dependencies = [
  "cluster-core",
+ "cluster-net",
  "cortex-m-rt",
  "defmt 1.0.1",
  "defmt-rtt",
  "embassy-executor",
+ "embassy-futures",
+ "embassy-net",
+ "embassy-net-wiznet",
  "embassy-rp",
  "embassy-sync",
  "embassy-time",
  "embedded-graphics-core",
+ "embedded-hal-bus",
+ "embedded-nal-async",
  "graphics-common",
  "hub75-driver",
  "panic-probe",
  "plugin-api",
  "plugin-host",
+ "smart-leds",
  "static_cell",
 ]
 

@@ -17,7 +17,9 @@ use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    let p = embassy_rp::init(Default::default());
+    let mut clk_config = embassy_rp::clocks::ClockConfig::rosc();
+    clk_config.core_voltage = embassy_rp::clocks::CoreVoltage::V1_20;
+    let p = embassy_rp::init(embassy_rp::config::Config::new(clk_config));
 
     // Spawn Core 1 to handle led blinking
     let led = gpio::Output::new(p.PIN_25, gpio::Level::Low);
@@ -102,17 +104,17 @@ async fn matrix_task(pio: Peri<'static, PIO0>, dma_channels: DmaChannels, pins: 
         // Measure animation frame drawing time
         let anim_start = embassy_time::Instant::now();
 
-        animations::quadrant::draw_animation_frame(&mut display, frame_counter).unwrap();
+        // animations::quadrant::draw_animation_frame(&mut display, frame_counter).unwrap();
         // animations::stars::draw_animation_frame(&mut display, frame_counter).unwrap();
 
         // animations::arrow::draw_animation_frame(&mut display, frame_counter).unwrap();
-        // animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
+        animations::fortytwo::draw_animation_frame(&mut display, frame_counter).unwrap();
         // display.draw_test_pattern();
 
         let anim_time = anim_start.elapsed();
 
         // Commit the buffer - this makes it visible on the display
-        // This is very fast (just a pointer swap) and non-blocking
+        // Blocks until the DMA read pointer enters the new buffer's range (up to one full scan)
         let commit_start = embassy_time::Instant::now();
         display.commit();
         let commit_time = commit_start.elapsed();

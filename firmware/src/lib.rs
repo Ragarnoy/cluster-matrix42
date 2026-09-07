@@ -18,7 +18,7 @@ use static_cell::StaticCell;
 pub type LayoutLock = RwLock<CriticalSectionRawMutex, Layout>;
 
 // Multicore setup
-pub static mut CORE1_STACK: Stack<4096> = Stack::new();
+pub static mut CORE1_STACK: Stack<32768> = Stack::new();
 pub static EXECUTOR1: StaticCell<Executor> = StaticCell::new();
 pub static DISPLAY_MEMORY: StaticCell<DisplayMemory> = StaticCell::new();
 pub static LAYOUT: StaticCell<LayoutLock> = StaticCell::new();

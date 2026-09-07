@@ -203,10 +203,13 @@ impl<'d> Hub75<'d> {
         self.memory.set_pixel(x, y, color, self.brightness);
     }
 
-    /// Commit the current drawing buffer (non-blocking)
+    /// Commit the current drawing buffer
     ///
     /// This swaps the double buffers, making the drawn frame visible
     /// and providing a fresh buffer for the next frame.
+    ///
+    /// Blocks for up to one panel scan (~3ms at 128x128) waiting for the
+    /// display DMA to switch to the new buffer — see [`DisplayMemory::commit`].
     pub fn commit(&mut self) {
         self.memory.commit();
     }

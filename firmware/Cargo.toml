@@ -19,12 +19,21 @@ panic-probe = { workspace = true, features = ["print-defmt"] }
 # Embassy dependencies
 cortex-m-rt = { workspace = true }
 embassy-executor = { workspace = true, features = ["platform-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
-embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xa"] }
+embassy-rp = { workspace = true, features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl", "rp235xb"] }
 embassy-time = { workspace = true, features = ["defmt", "defmt-timestamp-uptime"] }
 embassy-sync = { workspace = true }
 
+# Networking
+cluster-net = { workspace = true, features = ["defmt"] }
+embassy-futures = { git = "https://github.com/embassy-rs/embassy" }
+embassy-net = { git = "https://github.com/embassy-rs/embassy", features = ["defmt", "tcp", "dns", "dhcpv4", "medium-ethernet"] }
+embassy-net-wiznet = { git = "https://github.com/embassy-rs/embassy", features = ["defmt"] }
+embedded-hal-bus = { version = "0.3.0", features = ["async"] }
+embedded-nal-async = "0.9"
+
 # No std deps
 static_cell = { workspace = true }
+smart-leds = "0.4"
 
 [lib]
 test = false
@@ -32,12 +41,6 @@ bench = false
 
 [[bin]]
 name = "basic_panel"
-test = false
-bench = false
-
-[[bin]]
-name = "cluster_sim"
-path = "src/bin/cluster_sim_hard.rs"
 test = false
 bench = false
 

@@ -84,7 +84,16 @@ impl DisplayMemory {
     /// Commit the drawn buffer and make it active for display
     ///
     /// This swaps the buffers so the newly drawn frame becomes visible
-    /// while the old frame buffer becomes available for drawing
+    /// while the old frame buffer becomes available for drawing.
+    ///
+    /// Blocks until the display DMA has wrapped into the newly committed
+    /// buffer (up to one full scan, ~3ms at 128x128). The reload channel
+    /// (CH1) only picks up `fb_ptr` at the end of the current frame pass,
+    /// so clearing or drawing into the old buffer before then blanks the
+    /// remainder of the frame being scanned out — this was the cause of
+    /// visible shimmering at 128x128. If shimmering/tearing reappears,
+    /// suspect this wait (e.g. commit called while DMA is not running,
+    /// or the CH0/CH1 chain was reconfigured).
     pub fn commit(&mut self) {
         // Switch buffers
         self.current_buffer = !self.current_buffer;
@@ -95,6 +104,22 @@ impl DisplayMemory {
         } else {
             self.fb0.as_mut_ptr()
         };
+
+        // Wait until CH0 is actually reading from the new buffer before
+        // touching the old one. Skipped when CH0 isn't enabled yet so that
+        // commit() stays safe to call before the driver starts.
+        let dma = embassy_rp::pac::DMA;
+        if dma.ch(0).ctrl_trig().read().en() {
+            let new_start = self.fb_ptr as u32;
+            let new_end = new_start + FRAME_SIZE as u32;
+            loop {
+                let addr = dma.ch(0).read_addr().read();
+                if addr >= new_start && addr < new_end {
+                    break;
+                }
+                core::hint::spin_loop();
+            }
+        }
 
         // Clear the new draw buffer for next frame
         self.get_draw_buffer().fill(0);
@@ -140,18 +165,27 @@ impl DisplayMemory {
         let mut c_b: u16;
         let mut c_g: u16;
 
+        // Fast approximate divide by 255: exact for every u16 except 65535 (off by one there).
+        // Callers here stay well under that bound. Avoids hardware division in the hot pixel path.
+        #[inline(always)]
+        const fn div255(v: u16) -> u16 {
+            ((v as u32 + 1 + ((v as u32) >> 8)) >> 8) as u16
+        }
+
+        let br = brightness as u16;
+
         #[cfg(feature = "color_rgb")]
         {
-            c_r = (((color.r() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
-            c_g = (((color.g() << 2) as f32) * (brightness as f32 / 255f32)) as u16;
-            c_b = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+            c_r = div255((color.r() << 3) as u16 * br);
+            c_g = div255((color.g() << 2) as u16 * br);
+            c_b = div255((color.b() << 3) as u16 * br);
         }
 
         #[cfg(feature = "color_gbr")]
         {
-            c_g = (((color.r() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
-            c_b = (((color.g() << 2) as f32) * (brightness as f32 / 255f32)) as u16;
-            c_r = (((color.b() << 3) as f32) * (brightness as f32 / 255f32)) as u16;
+            c_g = div255((color.r() << 3) as u16 * br);
+            c_b = div255((color.g() << 2) as u16 * br);
+            c_r = div255((color.b() << 3) as u16 * br);
         }
 
         // Devkit PCB has address pins rotated: GPIO6→E, GPIO7→A, GPIO8→B, GPIO9→C, GPIO10→D
@@ -198,23 +232,19 @@ impl DisplayMemory {
             core::mem::swap(&mut c_r, &mut c_g);
         }
 
+        let draw_buffer = if self.current_buffer {
+            &mut self.fb0
+        } else {
+            &mut self.fb1
+        };
+
         for b in 0..COLOR_BITS {
-            // Extract the n-th bit of each component of the color and pack them
             let cr = (c_r >> b) & 0b1;
             let cg = (c_g >> b) & 0b1;
             let cb = (c_b >> b) & 0b1;
             let packed_rgb = (cb << 2 | cg << 1 | cr) as u8;
             let idx = base_idx + b * DISPLAY_WIDTH;
-
-            // Use current_buffer flag instead of pointer comparison
-            let draw_buffer = if self.current_buffer {
-                &mut self.fb0
-            } else {
-                &mut self.fb1
-            };
-
-            draw_buffer[idx] &= !(0b111 << shift);
-            draw_buffer[idx] |= packed_rgb << shift;
+            draw_buffer[idx] = (draw_buffer[idx] & !(0b111 << shift)) | (packed_rgb << shift);
         }
     }
 
